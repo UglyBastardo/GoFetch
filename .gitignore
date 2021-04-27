@@ -3,8 +3,6 @@
 
 build
 .settings
-.cproject
-.project
 
 # Object files
 *.o
