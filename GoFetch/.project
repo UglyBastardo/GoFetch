@@ -24,4 +24,16 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>ChibiOS</name>
+			<type>2</type>
+			<location>C:/Users/dayan/Documents/EPFL/Robotics/lib/ChibiOS</location>
+		</link>
+		<link>
+			<name>e-puck2_main-processor</name>
+			<type>2</type>
+			<location>C:/Users/dayan/Documents/EPFL/Robotics/lib/e-puck2_main-processor</location>
+		</link>
+	</linkedResources>
 </projectDescription>
