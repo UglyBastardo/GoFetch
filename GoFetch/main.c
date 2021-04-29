@@ -62,6 +62,9 @@ int main(void)
 	pi_regulator_start();
 	//process_image_start();
 
+	//test
+	turn_around();
+
     /* Infinite loop. */
     while (1) {
     	//waits 1 second
