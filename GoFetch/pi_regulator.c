@@ -10,11 +10,11 @@
 #include <pi_regulator.h>
 #include <process_image.h>
 
-//constante calculer une fois expérimentalement de manière précise
+//constante calculer une fois expï¿½rimentalement de maniï¿½re prï¿½cise
 
 
-//comme ça qu'on déclare variable const?
-//time for the robot to turn 90°
+//comme ï¿½a qu'on dï¿½clare variable const?
+//time for the robot to turn 90ï¿½
 static const int16_t TIME_TURN = 1000;
 //distance entre les roues
 static const int8_t DIST_WHEELS = 80; //mm (valeur random actuellement ^^')
@@ -55,7 +55,7 @@ static THD_FUNCTION(PiRegulator, arg) {
 
 
 //turn the robot in the given direction (RIGHT or LEFT)
-void turn(bool direction){
+/*void turn(bool direction){
 
 	if (direction) {
 		speed_left = NORMAL_SPEED;
@@ -69,9 +69,29 @@ void turn(bool direction){
 	speed_left = 0;
 	speed_right = 0;
 }
+*/
+
+uint32_t rotate_robot(angle_1293deg* angle_ptr, angular_speed ang_speed){
+
+	//Set Motor Speeds
+	left_motor_set_speed(ang_speed);
+	right_motor_set_speed(ang_speed);
+
+
+	while(robot_turning)
+	//modify value in static angle while turning wheels
+	//use while function determined by boolean "is_detected"
+	for(angle256deg i = &angle_ptr; i>0; i--){
+
+
+
+		if(!target_detected())
+			break;
+	}
+}
 
 void turn_around(){
-	//perte en précision vu que c'est que des int (réflechir si problématique)
+	//perte en prï¿½cision vu que c'est que des int (rï¿½flechir si problï¿½matique)
 	speed_left = (position_radius*NORMAL_SPEED)/(position_radius + DIST_WHEELS);
 	speed_right = NORMAL_SPEED;
 }

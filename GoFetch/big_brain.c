@@ -17,24 +17,6 @@ static angle_1293deg robot_angular_position;
 
 static BSEMAPHORE_DECL(BigBrain_sem, TRUE);
 
-uint32_t rotate_robot(angle_1293deg* angle_ptr, angular_speed ang_speed){
-
-	//Set Motor Speeds
-	left_motor_set_speed(ang_speed);
-	right_motor_set_speed(ang_speed);
-
-
-	while(robot_turning)
-	//modify value in static angle while turning wheels
-	//use while function determined by boolean "is_detected"
-	for(angle256deg i = &angle_ptr; i>0; i--){
-
-
-
-		if(!target_detected())
-			break;
-	}
-}
 
 static THD_WORKING_AREA(waMotorHandling, 256);
 static THD_FUNCTION(MotorHandling, arg) {
