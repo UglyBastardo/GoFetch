@@ -8,16 +8,23 @@
 #include <process_image.h>
 #include <big_brain.h>
 
-typedef angle_256deg uint8_t;
-typedef angular_speed uint8_t;
+typedef angle_1293deg uint16_t;
+typedef angular_speed uint16_t;
 
-#define STEPS_PER_ANGULAR_UNIT 3;
+#define STEPS_PER_ANGULAR_UNIT 1;
 
-static angle_256deg robot_angular_position;
+static angle_1293deg robot_angular_position;
 
 static BSEMAPHORE_DECL(BigBrain_sem, TRUE);
 
-void rotate_robot(angle_256deg* angle_ptr, angular_speed ang_speed){
+uint32_t rotate_robot(angle_1293deg* angle_ptr, angular_speed ang_speed){
+
+	//Set Motor Speeds
+	left_motor_set_speed(ang_speed);
+	right_motor_set_speed(ang_speed);
+
+
+	while(robot_turning)
 	//modify value in static angle while turning wheels
 	//use while function determined by boolean "is_detected"
 	for(angle256deg i = &angle_ptr; i>0; i--){
