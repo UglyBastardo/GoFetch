@@ -10,18 +10,62 @@
 #include <pi_regulator.h>
 #include <process_image.h>
 
+//La partie d'Eric! Je vais faire à ma manière et tu peux changer si tu trouves que c'est pas adapté:
+
+
+
+
+
+
+void rotate_angle(Angle angle_to_complete, Angular_speed angular_speed){
+	//Set Motor Speeds
+	left_motor_set_steps_to_complete(angle_to_complete);
+	right_motor_set_steps_to_complete(angle_to_complete);
+	left_motor_set_speed(angular_speed);
+	right_motor_set_speed(angular_speed);
+}
+
+void forward(Direction dir, uint16_t speed){
+	left_motor_set_steps_to_complete(MAXSTEPS);
+	right_motor_set_steps_to_complete(MAXSTEPS);
+
+	if(dir==-1 || dir==1){
+		left_motor_set_speed(speed*dir);
+		right_motor_set_speed(speed*dir);
+	} else {
+		left_motor_set_speed(ZERO);
+		right_motor_set_speed(ZERO);
+	}
+}
+
+void forward_nb_steps(uint32_t steps_to_complete);
+void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
+	angle_to_revolve = 0;
+	radius_of_revolution = 0;
+}
+
+
+
+
+
 //constante calculer une fois exp�rimentalement de mani�re pr�cise
 
+
+/*
 
 //comme �a qu'on d�clare variable const?
 //time for the robot to turn 90�
 static const int16_t TIME_TURN = 1000;
 //distance entre les roues
-static const int8_t DIST_WHEELS = 80; //mm (valeur random actuellement ^^')
+static const int8_t DIST_WHEELS = 53; //mm
+
+
 
 //besoin de 16 bits?
 static int16_t speed_left = 0;
 static int16_t speed_right = 0;
+
+
 
 //robot position in cylindrical coordinates
 static int16_t position_radius = 240;
@@ -42,7 +86,7 @@ static THD_FUNCTION(PiRegulator, arg) {
 
         /*
 		*	To complete
-		*/
+		/
         
         //applies the speed from the PI regulator
 		right_motor_set_speed(speed_left);
@@ -52,44 +96,21 @@ static THD_FUNCTION(PiRegulator, arg) {
         chThdSleepUntilWindowed(time, time + MS2ST(10));
     }
 }
-
-
-//turn the robot in the given direction (RIGHT or LEFT)
-/*void turn(bool direction){
-
-	if (direction) {
-		speed_left = NORMAL_SPEED;
-		speed_right = -NORMAL_SPEED;
-	} else {
-		speed_left = -NORMAL_SPEED;
-		speed_right = NORMAL_SPEED;
-	}
-
-	chThdSleepMilliseconds(TIME_TURN);
-	speed_left = 0;
-	speed_right = 0;
-}
 */
 
-uint32_t rotate_robot(angle_1293deg* angle_ptr, angular_speed ang_speed){
+//turn the robot in the given direction (HALT(0) RIGHT(1) or LEFT(-1))
+void turn(Direction dir, uint16_t speed){
 
-	//Set Motor Speeds
-	left_motor_set_speed(ang_speed);
-	right_motor_set_speed(ang_speed);
-
-
-	while(robot_turning)
-	//modify value in static angle while turning wheels
-	//use while function determined by boolean "is_detected"
-	for(angle256deg i = &angle_ptr; i>0; i--){
-
-
-
-		if(!target_detected())
-			break;
+	if(dir==-1 || dir==1){
+		right_motor_set_speed(-speed*dir);
+		left_motor_set_speed(speed*dir);
+	} else {
+		right_motor_set_speed(ZERO);
+		left_motor_set_speed(ZERO);
 	}
 }
 
+/*
 void turn_around(){
 	//perte en pr�cision vu que c'est que des int (r�flechir si probl�matique)
 	speed_left = (position_radius*NORMAL_SPEED)/(position_radius + DIST_WHEELS);
@@ -99,3 +120,4 @@ void turn_around(){
 void pi_regulator_start(void){
 	chThdCreateStatic(waPiRegulator, sizeof(waPiRegulator), NORMALPRIO, PiRegulator, NULL);
 }
+*/

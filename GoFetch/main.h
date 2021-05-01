@@ -12,6 +12,17 @@ extern "C" {
 
 //constants for the differents parts of the project
 #define IMAGE_BUFFER_SIZE		640
+#define ZERO 					0
+
+typedef int32_t		Angle;
+typedef int32_t		Angular_speed;
+typedef int8_t 		Direction;
+typedef uint8_t		Bool;
+
+typedef struct Position {
+	uint16_t xPosition;
+	uint16_t yPosition;
+} Position;
 
 /** Robot wide IPC bus. */
 extern messagebus_t bus;

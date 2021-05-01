@@ -48,7 +48,7 @@ void extract_data(uint8_t* data, uint16_t size,	uint8_t *pc){
 		pc += 0b10;
 	}
 }
-void find_target_center(uint8_t*data, uint16_t size){
+void find_target_center(uint8_t* data, uint16_t size){
 
 	/*
 	*   To Complete (find position of beginning and end of ball pos and return the )
