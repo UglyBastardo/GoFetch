@@ -179,7 +179,8 @@ static THD_FUNCTION(BigBrain, arg) {
       //===============================================================================================================
         case Forward:
         	while(VL53L0X_get_dist_mm()>MAX_DISTANCE){
-        		motors_set_ongoing(TRUE)
+        		//risque de bug non?, monopolise les threads et si détecte pas objet -> boucle infini jusqu'à mur
+        		motors_set_ongoing(TRUE);
         		forward(_FORWARD, NORMAL_SPEED);
         	}
         	while(VL53L0X_get_dist_mm()<MIN_DISTANCE)

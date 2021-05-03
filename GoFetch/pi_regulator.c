@@ -110,6 +110,18 @@ void turn(Direction dir, uint16_t speed){
 	}
 }
 
+void search_ball(){
+	//while var global set par big_brain.c?
+	int8_t angle=0; //set par rapport à l'angle actuel
+	while (current_angle!=angle){ //var à déclarer
+		turn_around();
+		chThdSleepMilliseconds(1000);
+	};
+	turn(right);
+	//move forward certain distance r=+distance
+	//turn right and keep on turning
+
+}
 /*
 void turn_around(){
 	//perte en prï¿½cision vu que c'est que des int (rï¿½flechir si problï¿½matique)
