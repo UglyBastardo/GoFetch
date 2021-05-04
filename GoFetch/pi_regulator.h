@@ -2,6 +2,7 @@
 #define PI_REGULATOR_H
 
 //pas s�r que cette valeur � besoin d'�tre dans le .h
+
 #define NORMAL_SPEED 500
 #define _RIGHT 1
 #define _LEFT  -1
@@ -12,12 +13,23 @@
 //start the PI regulator thread
 void pi_regulator_start(void);
 
+enum motor_mode {DoNothing, TurnAround, IncreaseRadius}
+
+//peut-etre creer son propre enum
+
+/**
+* @brief
+*
+* @param
+*/
+//void set_mode(Process_mode mode_);
 
 /**
 * @brief   Uses the motors to get the robot to rotate a certain anmount of steps (using the new functions in motors.h (demande moi au cas où)
 *
 * @param
 */
+
 void rotate_angle(Angle angle_to_complete, Angular_speed angular_speed);
 //turn in the given direction
 
@@ -26,7 +38,7 @@ void rotate_angle(Angle angle_to_complete, Angular_speed angular_speed);
 *
 * @param
 */
-void turn(Direction dir, uint16_t speed); //pas forc�ment besoin de mettre dans le .h peut-�tre
+void turn(Direction dir); //pas forc�ment besoin de mettre dans le .h peut-�tre
 
 
 /**
@@ -36,8 +48,6 @@ void turn(Direction dir, uint16_t speed); //pas forc�ment besoin de mettre dan
 */
 //turn around the target specified by distance to target and angle to align
 void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution);
-//turn around anti-clockwise
-//void turn_around(void);
 
 void forward(Direction dir, uint16_t speed);
 

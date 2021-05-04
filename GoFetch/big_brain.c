@@ -9,7 +9,7 @@
 #include <big_brain.h>
 #include <pi_regulator.h>
 
-enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, Shoot, Victory};
+//enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, Shoot, Victory};
 static enum Process_Mode mode = DoNothing;
 
 #define STEPS_PER_ANGULAR_UNIT 	1
@@ -17,6 +17,7 @@ static enum Process_Mode mode = DoNothing;
 #define MAX_DISTANCE			80		//mm
 #define FULLROTATION 			1293 	//steps
 #define OBJECT_RADIUS		 	12 		//mm
+
 
 static Angle robot_angle;
 static Position robot_pos = {0, 0};
@@ -125,7 +126,6 @@ static THD_FUNCTION(BigBrain, arg) {
     {
       switch(mode)
       {
-
       //===============================================================================================================
         case DoNothing:
           continue;
@@ -201,7 +201,7 @@ static THD_FUNCTION(BigBrain, arg) {
         	}
 
         	while(!is_hit()){
-        		;//Je sais qe cette merde a peu de sens et je compte bien la changer
+        		;//Je sais que cette merde a peu de sens et je compte bien la changer
         	}
         	motors_set_ongoing(FALSE);
         	mode = RotateAndSearch;
