@@ -65,7 +65,7 @@ int main(void)
 	//process_image_start();
 
 	//test
-//	turn_around();
+	//turn_around();
 
     /* Infinite loop. */
     while (1) {

@@ -34,6 +34,7 @@ void forward(Direction dir, uint16_t speed){
 }
 
 void forward_nb_steps(uint32_t steps_to_complete);
+
 void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 	angle_to_revolve = 0;
 	radius_of_revolution = 0;
@@ -48,29 +49,28 @@ void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 //==========================================================
 //test partie Dayan
 
-
-//comme ï¿½a qu'on dï¿½clare variable const?
-//time for the robot to turn 90ï¿½
-static const int16_t TIME_TURN = 1000;
 //distance entre les roues
-static const int8_t DIST_WHEELS = 53; //mm
-#define PI = 3.14159265;
+#define DIST_WHEELS 384.6 //unity: steps (0.13mm)
+#define NBR_STEP_FULLTURN 1000
+#define PI 3.14159265
 
-
+/*
 //besoin de 16 bits?
 static int16_t speed_left = 200;
 static int16_t speed_right = 200;
+*/
 
 //static Process_mode mode = DoNothing;
 //robot position in cylindrical coordinates
-static int16_t position_radius = 240;
+static int16_t position_radius = 1000; //unity steps
 static int16_t position_angle = 0;
 
-static motor_mode currentState = DoNothing;
+static enum motor_mode currentState = TurnAround;
 
 
-void turn_around();
+//void turn_around();
 
+void reset_number_step();
 /*
 void set_mode(Process_mode mode_){
 	mode = mode_;
@@ -85,37 +85,41 @@ static THD_FUNCTION(PiRegulator, arg) {
 
     systime_t time;
 
-    static int32_t motor_left_position=0;
+    /*static int32_t motor_left_position=0;
     static int32_t motor_right_position=0;
 
     //initalise values
     motor_left_position = left_motor_get_pos();
     motor_right_position = right_motor_get_pos();
-
+	*/
     //int16_t speed = 400;
-    left_motor_set_speed_step(NORMAL_SPEED, motor_left_position+1293);
-    right_motor_set_speed_step(NORMAL_SPEED, motor_right_position+1293);
 
     while(1){
         time = chVTGetSystemTime();
 
         switch (currentState){
-        case DoNothing:
-        	left_motor_set_speed(0);
-        	right_motor_set_speed(0);
-        	break;
+			case Stop:
+				//left_motor_set_speed(0);
+				//right_motor_set_speed(0);
+				break;
 
-        case TurnAround:
-        	turn_around();//à
-        	currentState = IncreaseRadius;
-        	break;
+			case TurnAround:
+				turn_around();//à
+				currentState = IncreaseRadius;
+				break;
 
-        case IncreaseRadius:
-        	turn(RIGHT);
-        	forward_nb_steps(1);
-        	turn(LEFT);
-        	currentState = TurnAround;
-        	break;
+			case IncreaseRadius:
+				if (get_ongoing_state()!=1){
+					turn(_RIGHT);
+				}
+				//forward_nb_steps(1);
+				//turn(_LEFT);
+				//currentState = TurnAround;
+				break;
+
+			default:
+				left_motor_set_speed(0);
+				right_motor_set_speed(0);
         }
         /*
 		*	To complete
@@ -153,19 +157,19 @@ void turn(Direction dir){
 		right_motor_set_speed(ZERO);
 		left_motor_set_speed(ZERO);
 	}*/
-	left_motor_set_speed_step(NORMAL_SPEED, motor_left_position+100*dir);//magic number
-	right_motor_set_speed_step(NORMAL_SPEED, motor_right_position-100*dir);
-	while (get_ongoing_state == 1){
+	left_motor_set_speed_step(-dir*NORMAL_SPEED, -dir*DIST_WHEELS*PI/4);//magic number
+	right_motor_set_speed_step(dir*NORMAL_SPEED, dir*DIST_WHEELS*PI/4);
+	/*while (get_ongoing_state() == 1){
 			chThdSleepMilliseconds(10);
-	}
+	}*/
 
 }
 
 
-void search_ball(){
+/*void search_ball(){
 	//while var global set par big_brain.c?
 	int8_t angle=position_angle; //set par rapport à l'angle actuel
-	while (position_angle<=angle+360){ //var à déclarer
+	while (position_angle<=angle+360){
 		turn_around();
 		chThdSleepMilliseconds(100);
 	};
@@ -174,20 +178,31 @@ void search_ball(){
 	//turn right and keep on turning
 
 }
-
+*/
 
 void turn_around(){
 	//perte en prï¿½cision vu que c'est que des int (rï¿½flechir si problï¿½matique)
-	int16_t speed_left_ = (position_radius*NORMAL_SPEED)/(position_radius + DIST_WHEELS);
-	int16_t speed_right = NORMAL_SPEED;
+	int16_t speed_left = ((position_radius - DIST_WHEELS/2)*NORMAL_SPEED)/(position_radius);
+	int16_t speed_right = ((position_radius+ DIST_WHEELS/2)*NORMAL_SPEED)/(position_radius);
+
 	//reset nbr step
 	//fonction convertisseur, choisir unité
-	left_motor_set_speed_step(speed_left, 2*PI*position_radius-DIST_WHEELS/2));//magic number
-	right_motor_set_speed_step(speed_right, 2*PI*position_radius+DIST_WHEELS/2);
-	while (get_ongoing_state == 1){
+	int32_t left_distance = 2*(position_radius-DIST_WHEELS/2)*PI;
+	int32_t right_distance = 2*(position_radius+DIST_WHEELS/2)*PI;
+	reset_number_step();
+	left_motor_set_speed_step(speed_left, left_distance);
+	right_motor_set_speed_step(speed_right, right_distance);
+	/*while (get_ongoing_state() == 1){
 		chThdSleepMilliseconds(10);
 	}
+	turn(_RIGHT);
+	turn(_LEFT);
+	*/
+}
 
+void reset_number_step(){
+	left_motor_set_pos(0);
+	right_motor_set_pos(0);
 }
 
 void pi_regulator_start(void){

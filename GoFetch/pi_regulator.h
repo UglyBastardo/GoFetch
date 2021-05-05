@@ -13,7 +13,7 @@
 //start the PI regulator thread
 void pi_regulator_start(void);
 
-enum motor_mode {DoNothing, TurnAround, IncreaseRadius}
+enum motor_mode{Stop, TurnAround, IncreaseRadius};
 
 //peut-etre creer son propre enum
 
@@ -50,5 +50,7 @@ void turn(Direction dir); //pas forc�ment besoin de mettre dans le .h peut-�
 void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution);
 
 void forward(Direction dir, uint16_t speed);
+
+void turn_around();
 
 #endif /* PI_REGULATOR_H */
