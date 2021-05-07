@@ -16,7 +16,7 @@ extern "C" {
 
 typedef int32_t		Angle;
 typedef int32_t		Angular_speed;
-typedef int8_t 		Direction;
+typedef int8_t 		Direction; //utile?????
 typedef uint8_t		Bool;
 
 typedef struct Position {

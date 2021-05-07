@@ -66,7 +66,7 @@ int main(void)
 
 	//test
 	//turn_around();
-
+	//turn(1);
     /* Infinite loop. */
     while (1) {
     	//waits 1 second

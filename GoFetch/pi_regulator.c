@@ -53,6 +53,7 @@ void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 #define DIST_WHEELS 384.6 //unity: steps (0.13mm)
 #define NBR_STEP_FULLTURN 1000
 #define PI 3.14159265
+#define INCREASE_RADIUS 1500 //arbitraire
 
 /*
 //besoin de 16 bits?
@@ -62,7 +63,7 @@ static int16_t speed_right = 200;
 
 //static Process_mode mode = DoNothing;
 //robot position in cylindrical coordinates
-static int16_t position_radius = 1000; //unity steps
+static int16_t position_radius = DIST_WHEELS/2; //unity steps
 static int16_t position_angle = 0;
 
 static enum motor_mode currentState = TurnAround;
@@ -71,6 +72,7 @@ static enum motor_mode currentState = TurnAround;
 //void turn_around();
 
 void reset_number_step();
+void increase_radius();
 /*
 void set_mode(Process_mode mode_){
 	mode = mode_;
@@ -101,21 +103,23 @@ static THD_FUNCTION(PiRegulator, arg) {
 			case Stop:
 				//left_motor_set_speed(0);
 				//right_motor_set_speed(0);
-				break;
+				continue;
 
 			case TurnAround:
+				if (get_ongoing_state()!=1){
 				turn_around();//à
 				currentState = IncreaseRadius;
-				break;
+				}
+				continue;
 
 			case IncreaseRadius:
 				if (get_ongoing_state()!=1){
-					turn(_RIGHT);
+					increase_radius();
 				}
 				//forward_nb_steps(1);
 				//turn(_LEFT);
 				//currentState = TurnAround;
-				break;
+				continue;
 
 			default:
 				left_motor_set_speed(0);
@@ -157,14 +161,36 @@ void turn(Direction dir){
 		right_motor_set_speed(ZERO);
 		left_motor_set_speed(ZERO);
 	}*/
-	left_motor_set_speed_step(-dir*NORMAL_SPEED, -dir*DIST_WHEELS*PI/4);//magic number
-	right_motor_set_speed_step(dir*NORMAL_SPEED, dir*DIST_WHEELS*PI/4);
+	reset_number_step();
+	left_motor_set_speed_step(dir*NORMAL_SPEED, dir*DIST_WHEELS*PI/4);//magic number
+	right_motor_set_speed_step(-dir*NORMAL_SPEED, -dir*DIST_WHEELS*PI/4);
 	/*while (get_ongoing_state() == 1){
 			chThdSleepMilliseconds(10);
 	}*/
 
 }
 
+void increase_radius(){
+	static int8_t state=0;
+	switch(state){
+		case 0:
+			turn(_RIGHT);
+			state++;
+			break;
+		case 1:
+			forward_nb_steps(INCREASE_RADIUS);
+			position_radius+=INCREASE_RADIUS;
+			state++;
+			break;
+		case 2:
+			turn(_LEFT);
+			state=0;
+			currentState=TurnAround;
+			break;
+		default:
+			state=0;
+	}
+}
 
 /*void search_ball(){
 	//while var global set par big_brain.c?
@@ -205,7 +231,12 @@ void reset_number_step(){
 	right_motor_set_pos(0);
 }
 
+void forward_nb_steps(uint32_t steps_to_complete){
+	left_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);//créer pour aussi aller en arrière?
+	right_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);
+}
+
 void pi_regulator_start(void){
-	chThdCreateStatic(waPiRegulator, sizeof(waPiRegulator), HIGHPRIO, PiRegulator, NULL);
+	chThdCreateStatic(waPiRegulator, sizeof(waPiRegulator), NORMALPRIO, PiRegulator, NULL);
 }
 
