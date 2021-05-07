@@ -99,9 +99,11 @@ uint16_t get_angle_to_target(void){
 	return angle_to_target;
 }
 
+/*
 uint8_t target_detected(void){
 	return is_detected;
 }
+*/
 
 void process_image_start(void){
 	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage, NULL);

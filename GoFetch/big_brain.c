@@ -10,7 +10,7 @@
 #include <pi_regulator.h>
 
 //enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, Shoot, Victory};
-static enum Process_Mode mode = DoNothing;
+static enum Process_Mode mode = RotateAndSearch; // /!\
 
 #define STEPS_PER_ANGULAR_UNIT 	1
 #define MIN_DISTANCE 		  	15 		//mm
@@ -18,7 +18,38 @@ static enum Process_Mode mode = DoNothing;
 #define FULLROTATION 			1293 	//steps
 #define OBJECT_RADIUS		 	12 		//mm
 
+//===============================================================================
+//dayan
+#define MAX_DETECTION_DISTANCE 500 //mm
 
+//regarde s'il détecte un objet
+uint8_t target_detected(void);
+
+//calcul l'angle à atteindre et aligne le robot
+void align_robot(void) {
+
+}
+
+uint8_t target_detected(void){
+	static uint8_t check=0; //pas sûr du nom
+	if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE && check==0){
+		check++;
+		return 0; //Object detected
+	} else if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE && check==1){
+		set_front_led(1);
+		check++;
+		return 0;
+	} else if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE && check==2){
+		set_body_led(1);
+		check = 0;
+		return 1;
+	} else {
+		check = 0;
+		return 0;
+	}
+}
+
+//==================================================================================
 static Angle robot_angle;
 static Position robot_pos = {0, 0};
 static Position target_pos  = {0, 0};
@@ -114,6 +145,8 @@ uint8_t is_hit(void){
 	 */
 }
 
+
+
 static BSEMAPHORE_DECL(BigBrain_sem, TRUE);
 
 
@@ -132,13 +165,13 @@ static THD_FUNCTION(BigBrain, arg) {
 
       //===============================================================================================================
         case RotateAndSearch:
-        	motors_set_ongoing(TRUE);
-        	if(target_detected())
+        	motor_search_ball();
+        	if(target_detected()==1)
         	{
-        		motors_set_ongoing(FALSE);
+        		motor_stop();
         		mode = Align;
         	} else {
-        		turn(_RIGHT, NORMAL_SPEED);
+        		//turn(_RIGHT, NORMAL_SPEED);
         	}
 
           continue;
@@ -147,12 +180,15 @@ static THD_FUNCTION(BigBrain, arg) {
         case Align:
 
         	//First, the robot detects and aligns itself. If The target is no longer detected, it searches again.
-        	if(target_detected()){
-        		rotate_angle(   get_angle_to_target(), NORMAL_SPEED );
+        	if(target_detected()==1){
+        		//rotate_angle(get_angle_to_target(), NORMAL_SPEED );
+        		rotate_angle(get_angle_to_target());
+        		mode = FinishedAligning;
         	} else {
         		mode = RotateAndSearch;
         	}
 
+        	/*
         	//Then, the robot decides what next move to do: go towards target if it is far enough and revolve around target if it is close enough
         	if(distance_to_target<MIN_DISTANCE || distance_to_target>MAX_DISTANCE){
         		mode = Forward;
@@ -162,23 +198,31 @@ static THD_FUNCTION(BigBrain, arg) {
 
         	//This last part updates the position and angular position of the robot
         	update_robot_angle();
-
+			*/
           continue;
 
+        //j'ai pas trouvé plus beau comme manière de faire
+        case FinishedAligning:
+        	if (finished_moving()==1){
+        		mode = Forward;
+        	}
+        	continue;
       //===============================================================================================================
         case Revolve:
 
         	//This part uses the distance to the target and positions to decide on the sequence to follow to get behind it.
-        	if(target_detected()){
+        	/*if(target_detected()){
         		revolve_around(calculate_revolution(), distance_to_target);
         	} else {
         		mode = RotateAndSearch;
         	}
+        	*/
+        	set_body_led(1);
           continue;
 
       //===============================================================================================================
         case Forward:
-        	while(VL53L0X_get_dist_mm()>MAX_DISTANCE){
+        	/*while(VL53L0X_get_dist_mm()>MAX_DISTANCE){
         		//risque de bug non?, monopolise les threads et si détecte pas objet -> boucle infini jusqu'à mur
         		motors_set_ongoing(TRUE);
         		forward(_FORWARD, NORMAL_SPEED);
@@ -189,6 +233,19 @@ static THD_FUNCTION(BigBrain, arg) {
         		forward(_BACKWARD, NORMAL_SPEED);
         	}
         	motors_set_ongoing(FALSE);
+        	*/
+        	if (VL53L0X_get_dist_mm()>MAX_DISTANCE){
+        		set_front_led(1);
+        		forward(_FORWARD, SLOW_SPEED);
+        	} else if (VL53L0X_get_dist_mm()<MIN_DISTANCE){
+        		set_front_led(0);
+        		forward(_BACKWARD, SLOW_SPEED);
+        	} else {
+        		//mode = Revolve;
+        		motor_stop();
+        		mode = Forward;
+        	}
+
           continue;
 
       //===============================================================================================================
@@ -211,9 +268,8 @@ static THD_FUNCTION(BigBrain, arg) {
         	//scream();
           continue;
       }
-
+      chThdSleepMilliseconds(100);
     }
-
 }
 
 void big_brain_start(void){

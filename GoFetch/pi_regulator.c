@@ -12,6 +12,7 @@
 
 //La partie d'Eric! Je vais faire Ã  ma maniÃ¨re et tu peux changer si tu trouves que c'est pas adaptÃ©:
 
+/*
 void rotate_angle(Angle angle_to_complete, Angular_speed angular_speed){
 	//Set Motor Speeds
 	left_motor_set_steps_to_complete(angle_to_complete);
@@ -19,27 +20,17 @@ void rotate_angle(Angle angle_to_complete, Angular_speed angular_speed){
 	left_motor_set_speed(angular_speed);
 	right_motor_set_speed(angular_speed);
 }
+*/
 
-void forward(Direction dir, uint16_t speed){
-	left_motor_set_steps_to_complete(MAXSTEPS);
-	right_motor_set_steps_to_complete(MAXSTEPS);
-
-	if(dir==-1 || dir==1){
-		left_motor_set_speed(speed*dir);
-		right_motor_set_speed(speed*dir);
-	} else {
-		left_motor_set_speed(ZERO);
-		right_motor_set_speed(ZERO);
-	}
-}
 
 void forward_nb_steps(uint32_t steps_to_complete);
 
+/* --> dans ma partie
 void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 	angle_to_revolve = 0;
 	radius_of_revolution = 0;
 }
-
+*/
 
 
 
@@ -64,15 +55,17 @@ static int16_t speed_right = 200;
 //static Process_mode mode = DoNothing;
 //robot position in cylindrical coordinates
 static int16_t position_radius = DIST_WHEELS/2; //unity steps
-static int16_t position_angle = 0;
+static int16_t position_angle = 0; // unity mRad
 
-static enum motor_mode currentState = TurnAround;
+static enum motor_mode currentState = Stop;
 
 
 //void turn_around();
 
-void reset_number_step();
-void increase_radius();
+void reset_number_step(void);
+void increase_radius(void);
+void turn_around(void);
+
 /*
 void set_mode(Process_mode mode_){
 	mode = mode_;
@@ -101,8 +94,8 @@ static THD_FUNCTION(PiRegulator, arg) {
 
         switch (currentState){
 			case Stop:
-				//left_motor_set_speed(0);
-				//right_motor_set_speed(0);
+				left_motor_set_speed(0);
+				right_motor_set_speed(0);
 				continue;
 
 			case TurnAround:
@@ -119,6 +112,15 @@ static THD_FUNCTION(PiRegulator, arg) {
 				//forward_nb_steps(1);
 				//turn(_LEFT);
 				//currentState = TurnAround;
+				continue;
+
+			case DoNothing_:
+				continue;
+
+			case CurrentlyMoving:
+				if (get_ongoing_state()!=1){
+					currentState=FinishedMoving;
+				} //faut faire un case FinishedMoving?
 				continue;
 
 			default:
@@ -145,10 +147,20 @@ static THD_FUNCTION(PiRegulator, arg) {
 		}
 		*/
         //100Hz
-        chThdSleepUntilWindowed(time, time + MS2ST(10));
+        chThdSleepUntilWindowed(time, time + MS2ST(50)); //avant 10
     }
 }
 
+//turn clock-wise
+void rotate_angle(uint16_t angle_to_complete) {
+
+	currentState = DoNothing_; //au cas où il était en stop
+
+	left_motor_set_speed_step(NORMAL_SPEED, DIST_WHEELS/2*angle_to_complete/MILIRAD_TO_RAD);//magic number
+	right_motor_set_speed_step(-NORMAL_SPEED, -DIST_WHEELS/2*angle_to_complete/MILIRAD_TO_RAD);
+
+	currentState = CurrentlyMoving;
+}
 
 //turn the robot in the given direction (HALT(0) RIGHT(1) or LEFT(-1))
 void turn(Direction dir){
@@ -170,7 +182,9 @@ void turn(Direction dir){
 
 }
 
-void increase_radius(){
+
+
+void increase_radius(void){
 	static int8_t state=0;
 	switch(state){
 		case 0:
@@ -206,7 +220,9 @@ void increase_radius(){
 }
 */
 
-void turn_around(){
+void turn_around(void){
+	revolve_around(2*PI,position_radius); //passer angle en mRad ou même microRad?
+	/*
 	//perte en prï¿½cision vu que c'est que des int (rï¿½flechir si problï¿½matique)
 	int16_t speed_left = ((position_radius - DIST_WHEELS/2)*NORMAL_SPEED)/(position_radius);
 	int16_t speed_right = ((position_radius+ DIST_WHEELS/2)*NORMAL_SPEED)/(position_radius);
@@ -224,9 +240,24 @@ void turn_around(){
 	turn(_RIGHT);
 	turn(_LEFT);
 	*/
+
 }
 
-void reset_number_step(){
+void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
+
+	int16_t speed_left = ((radius_of_revolution - DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
+	int16_t speed_right = ((radius_of_revolution+ DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
+
+	int32_t left_distance = (radius_of_revolution-DIST_WHEELS/2)*angle_to_revolve;
+	int32_t right_distance = (radius_of_revolution+DIST_WHEELS/2)*angle_to_revolve;
+
+	reset_number_step();
+
+	left_motor_set_speed_step(speed_left, left_distance);
+	right_motor_set_speed_step(speed_right, right_distance);
+}
+
+void reset_number_step(void){
 	left_motor_set_pos(0);
 	right_motor_set_pos(0);
 }
@@ -240,3 +271,46 @@ void pi_regulator_start(void){
 	chThdCreateStatic(waPiRegulator, sizeof(waPiRegulator), NORMALPRIO, PiRegulator, NULL);
 }
 
+void motor_search_ball(void){
+	//check if it is already in search mode
+	//set_body_led(1);
+	if (currentState != TurnAround && currentState != IncreaseRadius){
+		currentState = TurnAround;
+	}
+}
+
+void motor_stop(void){
+	//to calculate the position according to the state it was in
+	enum motor_mode ancientState = currentState;
+	currentState = Stop; // ===============================================================================0
+	switch (ancientState){
+		case TurnAround:
+			position_angle = right_motor_get_pos()*1000/(position_radius+DIST_WHEELS/2);
+			break;
+			//faut mettre un default?
+	}
+}
+
+
+uint8_t finished_moving(){
+	if (currentState = FinishedMoving){
+		currentState = DoNothing;
+		return 1;
+	}
+	return 0;
+}
+
+void forward(Direction dir, uint16_t speed){
+	//left_motor_set_steps_to_complete(MAXSTEPS);
+	//right_motor_set_steps_to_complete(MAXSTEPS);
+
+	currentState = DoNothing_;
+
+	if(dir==-1 || dir==1){
+		left_motor_set_speed(speed*dir);
+		right_motor_set_speed(speed*dir);
+	} else {
+		left_motor_set_speed(ZERO);
+		right_motor_set_speed(ZERO);
+	}
+}

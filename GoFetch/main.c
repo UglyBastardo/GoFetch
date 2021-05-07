@@ -58,7 +58,7 @@ int main(void)
 	//inits the motors
 	motors_init();
 	//inits the core thread
-	//big_brain_start();
+	big_brain_start();
 
 	//stars the threads for the pi regulator and the processing of the image
 	pi_regulator_start();
@@ -70,6 +70,12 @@ int main(void)
     /* Infinite loop. */
     while (1) {
     	//waits 1 second
+    	/*if (VL53L0X_get_dist_mm()<500){
+    		set_body_led(1);
+    	} else {
+    		set_body_led(0);
+    	}*/
+
         chThdSleepMilliseconds(1000);
     }
 }
