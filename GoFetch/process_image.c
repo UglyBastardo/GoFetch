@@ -29,6 +29,15 @@ static THD_FUNCTION(CaptureImage, arg) {
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
 
+	while(1){
+		//starts a capture
+		dcmi_capture_start();
+		//waits for the capture to be done
+		wait_image_ready();
+		//signals an image has been captured
+		chBSemSignal(&image_ready_sem);
+	}
+
 }
 
 void extract_data(uint8_t* data, uint16_t size,	uint8_t *pc){
@@ -77,6 +86,8 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 	uint8_t *img_buff_ptr;
 	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
+
+	bool send_to_computer = true;
 
     while(1){
     	//waits until an image has been captured
