@@ -13,8 +13,8 @@
 static enum Process_Mode mode = RotateAndSearch; // /!\
 
 #define STEPS_PER_ANGULAR_UNIT 	1
-#define MIN_DISTANCE 		  	15 		//mm
-#define MAX_DISTANCE			80		//mm
+#define MIN_DISTANCE 		  	40 		//mm
+#define MAX_DISTANCE			100		//mm
 #define FULLROTATION 			1293 	//steps
 #define OBJECT_RADIUS		 	12 		//mm
 
@@ -31,6 +31,11 @@ void align_robot(void) {
 }
 
 uint8_t target_detected(void){
+	if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE){
+		return 1;
+	}
+	return 0;
+	/*
 	static uint8_t check=0; //pas sûr du nom
 	if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE && check==0){
 		check++;
@@ -40,13 +45,14 @@ uint8_t target_detected(void){
 		check++;
 		return 0;
 	} else if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE && check==2){
-		set_body_led(1);
+		set_front_led(0);
 		check = 0;
 		return 1;
 	} else {
 		check = 0;
 		return 0;
 	}
+	*/
 }
 
 //==================================================================================
@@ -155,6 +161,8 @@ static THD_FUNCTION(BigBrain, arg) {
 
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
+
+
     while(mode!=Victory)
     {
       switch(mode)
@@ -166,9 +174,11 @@ static THD_FUNCTION(BigBrain, arg) {
       //===============================================================================================================
         case RotateAndSearch:
         	motor_search_ball();
+        	set_front_led(1);
         	if(target_detected()==1)
         	{
         		motor_stop();
+        		set_front_led(0);
         		mode = Align;
         	} else {
         		//turn(_RIGHT, NORMAL_SPEED);
@@ -183,7 +193,8 @@ static THD_FUNCTION(BigBrain, arg) {
         	if(target_detected()==1){
         		//rotate_angle(get_angle_to_target(), NORMAL_SPEED );
         		rotate_angle(get_angle_to_target());
-        		mode = FinishedAligning;
+        		//mode = FinishedAligning;
+        		mode = Forward;
         	} else {
         		mode = RotateAndSearch;
         	}
@@ -217,6 +228,7 @@ static THD_FUNCTION(BigBrain, arg) {
         		mode = RotateAndSearch;
         	}
         	*/
+        	motor_stop();
         	set_body_led(1);
           continue;
 
@@ -234,16 +246,20 @@ static THD_FUNCTION(BigBrain, arg) {
         	}
         	motors_set_ongoing(FALSE);
         	*/
-        	if (VL53L0X_get_dist_mm()>MAX_DISTANCE){
-        		set_front_led(1);
-        		forward(_FORWARD, SLOW_SPEED);
-        	} else if (VL53L0X_get_dist_mm()<MIN_DISTANCE){
-        		set_front_led(0);
-        		forward(_BACKWARD, SLOW_SPEED);
+        	if (target_detected()==1){
+				if (VL53L0X_get_dist_mm()>MAX_DISTANCE){
+					//set_front_led(1);
+					forward(_FORWARD, SLOW_SPEED);
+				} else if (VL53L0X_get_dist_mm()<MIN_DISTANCE){
+					//set_front_led(0);
+					forward(_BACKWARD, SLOW_SPEED);
+				} else {
+					//mode = Revolve;
+					motor_stop();
+					mode = Revolve;
+				}
         	} else {
-        		//mode = Revolve;
-        		motor_stop();
-        		mode = Forward;
+        		mode = RotateAndSearch;
         	}
 
           continue;

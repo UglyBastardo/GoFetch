@@ -57,7 +57,7 @@ static int16_t speed_right = 200;
 static int16_t position_radius = DIST_WHEELS/2; //unity steps
 static int16_t position_angle = 0; // unity mRad
 
-static enum motor_mode currentState = Stop;
+static enum motor_mode currentState = DoNothing_;
 
 
 //void turn_around();
@@ -122,10 +122,8 @@ static THD_FUNCTION(PiRegulator, arg) {
 					currentState=FinishedMoving;
 				} //faut faire un case FinishedMoving?
 				continue;
-
-			default:
-				left_motor_set_speed(0);
-				right_motor_set_speed(0);
+				//left_motor_set_speed(0);
+				//right_motor_set_speed(0);
         }
         /*
 		*	To complete
@@ -234,7 +232,7 @@ void turn_around(void){
 	reset_number_step();
 	left_motor_set_speed_step(speed_left, left_distance);
 	right_motor_set_speed_step(speed_right, right_distance);
-	/*while (get_ongoing_state() == 1){
+	 while (get_ongoing_state() == 1){
 		chThdSleepMilliseconds(10);
 	}
 	turn(_RIGHT);
@@ -275,6 +273,10 @@ void motor_search_ball(void){
 	//check if it is already in search mode
 	//set_body_led(1);
 	if (currentState != TurnAround && currentState != IncreaseRadius){
+		//set ongoing = 0
+		//peut-être faire un ongoing droite et gauche
+		left_motor_set_speed(0);
+		right_motor_set_speed(0);
 		currentState = TurnAround;
 	}
 }
@@ -283,17 +285,18 @@ void motor_stop(void){
 	//to calculate the position according to the state it was in
 	enum motor_mode ancientState = currentState;
 	currentState = Stop; // ===============================================================================0
-	switch (ancientState){
+	/*switch (ancientState){
 		case TurnAround:
 			position_angle = right_motor_get_pos()*1000/(position_radius+DIST_WHEELS/2);
 			break;
 			//faut mettre un default?
 	}
+	*/
 }
 
 
-uint8_t finished_moving(){
-	if (currentState = FinishedMoving){
+uint8_t finished_moving(void){
+	if (currentState == FinishedMoving){
 		currentState = DoNothing;
 		return 1;
 	}

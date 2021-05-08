@@ -61,6 +61,6 @@ void motor_stop(void);
 
 //one-time read: 1:done moving 0:still moving
 //vraiment si utile le finishedmoving?
-uint8_t finished_moving();
+uint8_t finished_moving(void);
 
 #endif /* PI_REGULATOR_H */
