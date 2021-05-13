@@ -43,7 +43,6 @@ void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 //distance entre les roues
 #define DIST_WHEELS 384.6 //unity: steps (0.13mm)
 #define NBR_STEP_FULLTURN 1000
-#define PI 3.14159265
 #define INCREASE_RADIUS 1500 //arbitraire
 
 /*
@@ -55,15 +54,33 @@ static int16_t speed_right = 200;
 //static Process_mode mode = DoNothing;
 //robot position in cylindrical coordinates
 static int16_t position_radius = DIST_WHEELS/2; //unity steps
-static int16_t position_angle = 0; // unity mRad
+//static int16_t position_angle = 0; // unity mRad
 
+//pas sûr de ça (mettre en 32?)
+static int16_t distance = 0;
+
+enum motor_mode{Stop, TurnAround, IncreaseRadius, DoNothing_, CurrentlyMoving, FinishedMoving, Forward_};
 static enum motor_mode currentState = DoNothing_;
 
 
 //void turn_around();
 
+/**
+* @brief   reset to 0 the step counter in motor.c for both motors
+*
+*/
 void reset_number_step(void);
+
+/**
+* @brief   increase the searching radius by a certain distance (INCREASE_RADIUS)
+*
+*/
 void increase_radius(void);
+
+/**
+* @brief   robot makes a full 360° turn around a point (given by position_radius)
+*
+*/
 void turn_around(void);
 
 /*
@@ -101,7 +118,7 @@ static THD_FUNCTION(PiRegulator, arg) {
 			case TurnAround:
 				if (get_ongoing_state()!=1){
 				turn_around();//à
-				currentState = IncreaseRadius;
+				//currentState = IncreaseRadius;
 				}
 				continue;
 
@@ -183,6 +200,7 @@ void turn(Direction dir){
 
 
 void increase_radius(void){
+	//turn right, move forward and then turn left to increase the radius
 	static int8_t state=0;
 	switch(state){
 		case 0:
@@ -219,7 +237,9 @@ void increase_radius(void){
 */
 
 void turn_around(void){
-	revolve_around(2*PI,position_radius); //passer angle en mRad ou même microRad?
+	revolve_around(2*MILIRAD_TO_RAD*PI,position_radius); //passer angle en mRad ou même microRad?
+
+	currentState = IncreaseRadius;
 	/*
 	//perte en prï¿½cision vu que c'est que des int (rï¿½flechir si problï¿½matique)
 	int16_t speed_left = ((position_radius - DIST_WHEELS/2)*NORMAL_SPEED)/(position_radius);
@@ -243,16 +263,20 @@ void turn_around(void){
 
 void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 
+	currentState = DoNothing_;
+
 	int16_t speed_left = ((radius_of_revolution - DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
 	int16_t speed_right = ((radius_of_revolution+ DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
 
-	int32_t left_distance = (radius_of_revolution-DIST_WHEELS/2)*angle_to_revolve;
-	int32_t right_distance = (radius_of_revolution+DIST_WHEELS/2)*angle_to_revolve;
+	int32_t left_distance = (radius_of_revolution-DIST_WHEELS/2)*angle_to_revolve/MILIRAD_TO_RAD;
+	int32_t right_distance = (radius_of_revolution+DIST_WHEELS/2)*angle_to_revolve/MILIRAD_TO_RAD;
 
 	reset_number_step();
 
 	left_motor_set_speed_step(speed_left, left_distance);
 	right_motor_set_speed_step(speed_right, right_distance);
+
+	currentState = CurrentlyMoving;
 }
 
 void reset_number_step(void){
@@ -285,13 +309,12 @@ void motor_stop(void){
 	//to calculate the position according to the state it was in
 	enum motor_mode ancientState = currentState;
 	currentState = Stop; // ===============================================================================0
-	/*switch (ancientState){
-		case TurnAround:
-			position_angle = right_motor_get_pos()*1000/(position_radius+DIST_WHEELS/2);
+	switch (ancientState){
+		case Forward:
+			distance = left_motor_get_pos();
 			break;
 			//faut mettre un default?
 	}
-	*/
 }
 
 
@@ -307,7 +330,10 @@ void forward(Direction dir, uint16_t speed){
 	//left_motor_set_steps_to_complete(MAXSTEPS);
 	//right_motor_set_steps_to_complete(MAXSTEPS);
 
-	currentState = DoNothing_;
+	if (currentState != Forward_){
+		currentState = Forward_;
+		reset_number_step();
+	}
 
 	if(dir==-1 || dir==1){
 		left_motor_set_speed(speed*dir);
@@ -317,3 +343,12 @@ void forward(Direction dir, uint16_t speed){
 		right_motor_set_speed(ZERO);
 	}
 }
+
+int16_t get_distance(void){
+	return distance;
+}
+
+int16_t get_radius(void){
+	return position_radius;
+}
+

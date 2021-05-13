@@ -25,9 +25,25 @@ static enum Process_Mode mode = RotateAndSearch; // /!\
 //regarde s'il détecte un objet
 uint8_t target_detected(void);
 
+//est-ce qu'on a besoin que ça soit le même type ou pas?
+int32_t calculate_distance(void);
+
+
 //calcul l'angle à atteindre et aligne le robot
 void align_robot(void) {
 
+}
+
+int32_t calculate_distance(void){
+
+	//même code & calcul que dans angle, moyen d'optimiser?
+	int16_t distance_moved = get_distance();
+	distance_moved += VL53L0X_get_dist_mm()*MM_TO_STEP;
+	int16_t radius = get_radius();
+	double alpha = 0; //get_angle()
+	int32_t dist = sqrt(distance_moved*distance_moved + radius*radius - 2*distance_moved*radius*cos(PI/2+alpha));
+
+	return dist;
 }
 
 uint8_t target_detected(void){
@@ -121,7 +137,16 @@ void update_target_pos(void){
 */
 
 Angle calculate_revolution(void){
-	Angle angle_to_align = 0;
+
+	double distance_moved = (double)get_distance();
+	distance_moved += (double)(VL53L0X_get_dist_mm()*MM_TO_STEP);
+	double radius = (double)get_radius();
+	double alpha = 0; //get_angle()
+	double dist = distance_moved*distance_moved + radius*radius - 2*distance_moved*radius*cos(PI/2+alpha);
+	//double rotation_angle = PI - acos((dist + distance_moved*distance_moved - radius^2)/(2*distance_moved*sqrt(dist)));
+	double rotation_angle = 0;
+	Angle angle_to_align = rotation_angle * MILIRAD_TO_RAD;
+
 
 	//to Complete
 
@@ -180,9 +205,9 @@ static THD_FUNCTION(BigBrain, arg) {
         		motor_stop();
         		set_front_led(0);
         		mode = Align;
-        	} else {
+        	} /*else {
         		//turn(_RIGHT, NORMAL_SPEED);
-        	}
+        	}*/
 
           continue;
 
@@ -222,12 +247,13 @@ static THD_FUNCTION(BigBrain, arg) {
         case Revolve:
 
         	//This part uses the distance to the target and positions to decide on the sequence to follow to get behind it.
-        	/*if(target_detected()){
-        		revolve_around(calculate_revolution(), distance_to_target);
+        	if(target_detected()==1){
+        		revolve_around(calculate_revolution(), VL53L0X_get_dist_mm()*MM_TO_STEP);
+        		mode = Shoot;
         	} else {
         		mode = RotateAndSearch;
         	}
-        	*/
+
         	motor_stop();
         	set_body_led(1);
           continue;
@@ -265,8 +291,9 @@ static THD_FUNCTION(BigBrain, arg) {
           continue;
 
       //===============================================================================================================
+        //revoir le nom?
         case Shoot:
-        	if(target_detected()) {
+        	/*if(target_detected()) {
         		motors_set_ongoing(TRUE);
         		forward(_FORWARD, calculate_speed());
         	} else {
@@ -278,6 +305,11 @@ static THD_FUNCTION(BigBrain, arg) {
         	}
         	motors_set_ongoing(FALSE);
         	mode = RotateAndSearch;
+        	*/
+        	if(target_detected() && finished_moving()){
+        		forward_nb_steps(calculate_distance());
+        		mode = Victory;
+        	}
           continue;
       //===============================================================================================================
         case Victory:
