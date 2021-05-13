@@ -46,7 +46,175 @@ void calibrate_camera(uint8_t brightness, uint8_t contrast, uint8_t awb, uint8_t
 	po8030_set_rgb_gain(r_gain,g_gain, b_gain);
 	po8030_set_exposure(e_integral, e_fractional);
 }
+void extract_data(uint8_t* data, uint16_t size,	uint8_t *pc){
+	//Extracts red bits from buffer
+	for(uint16_t i = 0; i<size;i++){
+		data[i]= *pc>>0b11;
+		pc += 0b10;
+	}
+}
 
+void update_target_detection(uint8_t *buffer){
+
+
+	uint16_t i = 0, begin = 0, end = 0;
+	uint8_t stop = 0, wrong_target = 0;
+	target_not_found = 0;
+	uint32_t mean = 0;
+
+
+	//performs an average
+	for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
+		mean += buffer[i];
+	}
+	mean /= IMAGE_BUFFER_SIZE;
+
+	do{
+		wrong_target = 0;
+		//search for a begin
+		while(stop == 0 && i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))
+		{
+			//the slope must at least be WIDTH_SLOPE wide and is compared
+		    //to the mean of the image
+			if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i+WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
+		    {
+		        begin = i;
+		        stop = 1;
+		    }
+		    i++;
+		}
+		//if a begin was found, search for an end
+		if (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE) && begin)
+		{
+		    stop = 0;
+
+		    while(stop == 0 && i < IMAGE_BUFFER_SIZE)
+		    {
+		    	if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i-WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
+		        {
+		            end = i;
+		            stop = 1;
+		        }
+		        i++;
+		    }
+		    //if an end was not found
+		    if (i > IMAGE_BUFFER_SIZE || !end)
+		    {
+		        target_not_found = 1;
+		    }
+		}
+		else//if no begin was found
+		{
+		    target_not_found = 1;
+		}
+
+		//if a line too small has been detected, continues the search
+		if(!target_not_found && (end-begin) < MIN_WIDTH_PIXELS){
+			i = end;
+			begin = 0;
+			end = 0;
+			stop = 0;
+			wrong_target = 1;
+		}
+	}while(wrong_target);
+
+	if(target_not_found){
+		begin = 0;
+		end = 0;
+	}else{
+		target_position = (begin + end)/2; //gives the line position.
+	}
+
+//
+//	//=======================================================================================================================================
+//	uint16_t i = 0, begin = 0, end = 0;
+//	uint16_t target_begin = 0, target_end = 0;
+//	uint8_t stop = 0,  target_count = 0;
+//	uint8_t _target_not_found = 0;
+//
+//	do{
+//
+//										//=====================================================================
+//										//search for a begin
+//		while(stop == 0 && i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))
+//		{
+//			//the slope must at least be WIDTH_SLOPE wide and is compared
+//			//to the mean of the image
+//			if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i+WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
+//			{
+//				begin = i;
+//				i+=WIDTH_SLOPE;
+//				stop = 1;
+//			}
+//			i++;
+//		}
+//
+//										//=====================================================================
+//										//if a begin was found, search for an end
+//		if (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE) && begin)
+//		{
+//			stop = 0;
+//
+//			while(stop == 0 && i < IMAGE_BUFFER_SIZE)
+//			{
+//				if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i-WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
+//				{
+//					end = i;
+//					i+= WIDTH_SLOPE;
+//					stop = 1;
+//				}
+//				i++;
+//			}
+//			//if an end was not found
+//			if (i > IMAGE_BUFFER_SIZE || !end)
+//			{
+//				_target_not_found = 1;
+//			}
+//		}
+//		else//if no begin was found
+//		{
+//			_target_not_found = 1;
+//		}
+//
+//										//=====================================================================
+//										//if a target too small has been detected, continues the search
+//		if(!_target_not_found && (end-begin) < MIN_WIDTH_PIXELS){
+//			begin = 0;
+//			end = 0;
+//			stop = 0;
+//		} else if (!_target_not_found){
+//			target_count++;
+//			target_begin = begin;
+//			target_end = end;
+//		}
+//
+//										//=====================================================================
+//										//if multiple targets have been detected abort search
+//		if(target_count > 1){
+//			set_led(LED5,TRUE);
+//			break;
+//		}
+//
+//	}while(i < IMAGE_BUFFER_SIZE);
+//
+//
+//										//=====================================================================
+//										//setting controler led for if multiple targets detected
+//	if(target_count < 2){
+//		set_led(LED5,FALSE);
+//	}
+//
+//										//=====================================================================
+//										//Updating static values
+//	if(target_count == 1){
+//		target_not_found = 0;
+//		target_position = (target_end+target_begin)>>1;
+//	}
+//	else{
+//		target_not_found = 1;
+//		target_position = 0;
+//	}
+}
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
@@ -75,105 +243,6 @@ static THD_FUNCTION(CaptureImage, arg) {
 
 }
 
-void extract_data(uint8_t* data, uint16_t size,	uint8_t *pc){
-	//Extracts red bits from buffer
-	for(uint16_t i = 0; i<size;i++){
-		data[i]= *pc>>0b11;
-		pc += 0b10;
-	}
-}
-
-void update_target_detection(uint8_t *buffer){
-
-	uint16_t i = 0, begin = 0, end = 0;
-	uint16_t target_begin = 0, target_end = 0;
-	uint8_t stop = 0,  target_count = 0;
-	uint8_t _target_not_found = 0;
-
-	do{
-
-										//=====================================================================
-										//search for a begin
-		while(stop == 0 && i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))
-		{
-			//the slope must at least be WIDTH_SLOPE wide and is compared
-			//to the mean of the image
-			if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i+WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
-			{
-				begin = i;
-				i+=WIDTH_SLOPE;
-				stop = 1;
-			}
-			i++;
-		}
-
-										//=====================================================================
-										//if a begin was found, search for an end
-		if (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE) && begin)
-		{
-			stop = 0;
-
-			while(stop == 0 && i < IMAGE_BUFFER_SIZE)
-			{
-				if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i-WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
-				{
-					end = i;
-					i+= WIDTH_SLOPE;
-					stop = 1;
-				}
-				i++;
-			}
-			//if an end was not found
-			if (i > IMAGE_BUFFER_SIZE || !end)
-			{
-				_target_not_found = 1;
-			}
-		}
-		else//if no begin was found
-		{
-			_target_not_found = 1;
-		}
-
-										//=====================================================================
-										//if a target too small has been detected, continues the search
-		if(!_target_not_found && (end-begin) < MIN_WIDTH_PIXELS){
-			begin = 0;
-			end = 0;
-			stop = 0;
-		} else if (!_target_not_found){
-			target_count++;
-			target_begin = begin;
-			target_end = end;
-		}
-
-										//=====================================================================
-										//if multiple targets have been detected abort search
-		if(target_count > 1){
-			set_led(LED5,TRUE);
-			break;
-		}
-
-	}while(i < IMAGE_BUFFER_SIZE);
-
-
-										//=====================================================================
-										//setting controler led for if multiple targets detected
-	if(target_count < 2){
-		set_led(LED5,FALSE);
-	}
-
-										//=====================================================================
-										//Updating static values
-	if(target_count == 1){
-		target_not_found = 0;
-		target_position = (target_end+target_begin)>>1;
-	}
-	else{
-		target_not_found = 1;
-		target_position = 0;
-	}
-}
-
 static THD_WORKING_AREA(waProcessImage, 1024);
 static THD_FUNCTION(ProcessImage, arg) {
 
@@ -182,7 +251,8 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 	uint8_t *img_buff_ptr;
 	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
-	static uint8_t send_to_comp;
+
+	bool send_to_computer = true;
 
     while(1){
     	//waits until an image has been captured
@@ -190,23 +260,29 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//gets the pointer to the array filled with the last image in RGB565
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
-		//extract the useful bits from each pixel on the processed line
+		//Extracts red pixels
 		extract_data(image, IMAGE_BUFFER_SIZE, img_buff_ptr);
 
-		//Process the extracted bits in order to detect the presence of the target and, if so,
-		//get a value for the angular position of the ball compared to the robots orientation
+		//search for a target in the image and gets its position in pixels
 		update_target_detection(image);
 
-		//Send to computer and turn on led for monitoring
-		if(target_not_found){
-			set_led(LED7, 0);
+
+		send_to_computer = !send_to_computer;
+				if(target_not_found) {
+					set_led(LED7,0);
+					set_led(LED3,0);
+					set_led(LED5,0);
+				} else {
+					set_led(LED7,1);
+					set_led(LED3,1);
+					set_led(LED5,1);
 		}
-		else{
-			set_led(LED7, 1);
-		}
-		if(send_to_comp)
+
+		if(send_to_computer){
+			//sends to the computer the image
 			SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
-		send_to_comp = !send_to_comp;
+		}
+		//invert the bool
     }
 }
 
