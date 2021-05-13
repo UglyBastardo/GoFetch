@@ -15,7 +15,7 @@ extern "C" {
 #define ZERO 					0
 
 typedef int32_t		Angle;
-typedef int32_t		Angular_speed;
+typedef int			speed;
 typedef int8_t 		Direction; //utile?????
 typedef uint8_t		Bool;
 

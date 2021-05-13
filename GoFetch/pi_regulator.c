@@ -100,7 +100,7 @@ static THD_FUNCTION(PiRegulator, arg) {
 
 			case TurnAround:
 				if (get_ongoing_state()!=1){
-				turn_around();//à
+				turn_around();//ï¿½
 				currentState = IncreaseRadius;
 				}
 				continue;
@@ -152,7 +152,7 @@ static THD_FUNCTION(PiRegulator, arg) {
 //turn clock-wise
 void rotate_angle(uint16_t angle_to_complete) {
 
-	currentState = DoNothing_; //au cas où il était en stop
+	currentState = DoNothing_; //au cas oï¿½ il ï¿½tait en stop
 
 	left_motor_set_speed_step(NORMAL_SPEED, DIST_WHEELS/2*angle_to_complete/MILIRAD_TO_RAD);//magic number
 	right_motor_set_speed_step(-NORMAL_SPEED, -DIST_WHEELS/2*angle_to_complete/MILIRAD_TO_RAD);
@@ -204,29 +204,25 @@ void increase_radius(void){
 	}
 }
 
-/*void search_ball(){
-	//while var global set par big_brain.c?
-	int8_t angle=position_angle; //set par rapport à l'angle actuel
-	while (position_angle<=angle+360){
-		turn_around();
-		chThdSleepMilliseconds(100);
-	};
-	turn(right);
-	//move forward certain distance r=+distance
-	//turn right and keep on turning
+//void turn_eric(Speed speed){
+//	left_motor_set_speed_step(dir*NORMAL_SPEED, dir*DIST_WHEELS*PI/4);//magic number
+//	right_motor_set_speed_step(-dir*NORMAL_SPEED, -dir*DIST_WHEELS*PI/4);
+//}
+//
+//void align_with_target(){
+//	speed = get_angle_to_target() * Kp;
+//}
 
-}
-*/
 
 void turn_around(void){
-	revolve_around(2*PI,position_radius); //passer angle en mRad ou même microRad?
+	revolve_around(2*PI,position_radius); //passer angle en mRad ou mï¿½me microRad?
 	/*
 	//perte en prï¿½cision vu que c'est que des int (rï¿½flechir si problï¿½matique)
 	int16_t speed_left = ((position_radius - DIST_WHEELS/2)*NORMAL_SPEED)/(position_radius);
 	int16_t speed_right = ((position_radius+ DIST_WHEELS/2)*NORMAL_SPEED)/(position_radius);
 
 	//reset nbr step
-	//fonction convertisseur, choisir unité
+	//fonction convertisseur, choisir unitï¿½
 	int32_t left_distance = 2*(position_radius-DIST_WHEELS/2)*PI;
 	int32_t right_distance = 2*(position_radius+DIST_WHEELS/2)*PI;
 	reset_number_step();
@@ -261,7 +257,7 @@ void reset_number_step(void){
 }
 
 void forward_nb_steps(uint32_t steps_to_complete){
-	left_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);//créer pour aussi aller en arrière?
+	left_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);//crï¿½er pour aussi aller en arriï¿½re?
 	right_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);
 }
 
@@ -274,7 +270,7 @@ void motor_search_ball(void){
 	//set_body_led(1);
 	if (currentState != TurnAround && currentState != IncreaseRadius){
 		//set ongoing = 0
-		//peut-être faire un ongoing droite et gauche
+		//peut-ï¿½tre faire un ongoing droite et gauche
 		left_motor_set_speed(0);
 		right_motor_set_speed(0);
 		currentState = TurnAround;
