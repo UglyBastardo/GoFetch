@@ -10,6 +10,10 @@
 #include <process_image.h>
 #include <big_brain.h>
 
+#define INFINITE_ROTATION   0
+#define FINITE_ROTATION 	1
+#define KP 	3
+#define MIN_ANGLE 			5
 //La partie d'Eric! Je vais faire à ma manière et tu peux changer si tu trouves que c'est pas adapté:
 
 /*
@@ -22,6 +26,52 @@ void rotate_angle(Angle angle_to_complete, Angular_speed angular_speed){
 }
 */
 
+
+//returns true if the robot is aligned
+uint8_t P_control(int error);
+void rotate_eric(uint8_t mode, Angle rotation_angle, Speed speed);
+void rotate_angle_eric(Speed speed, Angle angle_to_complete);
+void halt_robot_eric(void);
+
+
+uint8_t P_control(int error){
+	if(error > MIN_ANGLE || error < -MIN_ANGLE){
+		rotate_eric(INFINITE_ROTATION, 0, KP*error);
+		return FALSE;
+	}
+	else{
+		halt_robot_eric();
+		return TRUE;
+	}
+}
+
+
+//mode = 1 simply rotates with speed; mode = 2 rotates a certain angle with speed; mode = 0 Halts the robot
+void rotate_eric(uint8_t mode, Angle rotation_angle, Speed speed){
+	switch(mode){
+	  case 0:
+		    right_motor_set_speed(speed);
+		  	left_motor_set_speed(-speed);
+	    break;
+
+	  case 1:
+			rotate_angle_eric((int)speed, rotation_angle);
+		break;
+
+	}
+}
+
+//the angle given here uses a 1293 degrees as a full rotation (nb step necessary)
+void rotate_angle_eric(Speed speed, Angle angle_to_complete){
+	left_motor_set_speed_step((int)-speed, (uint32_t)angle_to_complete);
+	right_motor_set_speed_step((int)speed, (uint32_t)angle_to_complete);
+}
+
+//Halt the robot
+void halt_robot_eric(void){
+	left_motor_set_speed(0);
+	right_motor_set_speed(0);
+}
 
 void forward_nb_steps(uint32_t steps_to_complete);
 

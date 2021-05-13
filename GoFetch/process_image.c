@@ -287,7 +287,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 }
 
 int get_angle_to_target(void){
-	return target_position;
+	return -(target_position-(IMAGE_BUFFER_SIZE>>1));
 }
 
 uint8_t target_detected_camera(void){
