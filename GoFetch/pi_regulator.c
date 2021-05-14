@@ -10,10 +10,13 @@
 #include <process_image.h>
 #include <big_brain.h>
 
-#define INFINITE_ROTATION   0
-#define FINITE_ROTATION 	1
-#define KP 	3
+#define INFINITE_ROTATION   1
+#define FINITE_ROTATION 	2
+#define FIND_MODE			1
+#define LOSE_MODE 			0
+#define KP 					3
 #define MIN_ANGLE 			5
+#define FRAMES_FOR_DETECTION 10
 //La partie d'Eric! Je vais faire à ma manière et tu peux changer si tu trouves que c'est pas adapté:
 
 /*
@@ -27,51 +30,11 @@ void rotate_angle(Angle angle_to_complete, Angular_speed angular_speed){
 */
 
 
-//returns true if the robot is aligned
-uint8_t P_control(int error);
+uint8_t found_lost_target_eric(uint8_t mode);
+uint8_t P_control(int error); //returns true if the robot is aligned
 void rotate_eric(uint8_t mode, Angle rotation_angle, Speed speed);
 void rotate_angle_eric(Speed speed, Angle angle_to_complete);
 void halt_robot_eric(void);
-
-
-uint8_t P_control(int error){
-	if(error > MIN_ANGLE || error < -MIN_ANGLE){
-		rotate_eric(INFINITE_ROTATION, 0, KP*error);
-		return FALSE;
-	}
-	else{
-		halt_robot_eric();
-		return TRUE;
-	}
-}
-
-
-//mode = 1 simply rotates with speed; mode = 2 rotates a certain angle with speed; mode = 0 Halts the robot
-void rotate_eric(uint8_t mode, Angle rotation_angle, Speed speed){
-	switch(mode){
-	  case 0:
-		    right_motor_set_speed(speed);
-		  	left_motor_set_speed(-speed);
-	    break;
-
-	  case 1:
-			rotate_angle_eric((int)speed, rotation_angle);
-		break;
-
-	}
-}
-
-//the angle given here uses a 1293 degrees as a full rotation (nb step necessary)
-void rotate_angle_eric(Speed speed, Angle angle_to_complete){
-	left_motor_set_speed_step((int)-speed, (uint32_t)angle_to_complete);
-	right_motor_set_speed_step((int)speed, (uint32_t)angle_to_complete);
-}
-
-//Halt the robot
-void halt_robot_eric(void){
-	left_motor_set_speed(0);
-	right_motor_set_speed(0);
-}
 
 void forward_nb_steps(uint32_t steps_to_complete);
 
@@ -139,63 +102,71 @@ static THD_FUNCTION(PiRegulator, arg) {
 	*/
     //int16_t speed = 400;
 
+    static uint8_t searching = TRUE;
+    static uint8_t aligned   = FALSE;
+
     while(1){
-        time = chVTGetSystemTime();
-
-        switch (currentState){
-			case Stop:
-				left_motor_set_speed(0);
-				right_motor_set_speed(0);
-				continue;
-
-			case TurnAround:
-				if (get_ongoing_state()!=1){
-				turn_around();//�
-				currentState = IncreaseRadius;
-				}
-				continue;
-
-			case IncreaseRadius:
-				if (get_ongoing_state()!=1){
-					increase_radius();
-				}
-				//forward_nb_steps(1);
-				//turn(_LEFT);
-				//currentState = TurnAround;
-				continue;
-
-			case DoNothing_:
-				continue;
-
-			case CurrentlyMoving:
-				if (get_ongoing_state()!=1){
-					currentState=FinishedMoving;
-				} //faut faire un case FinishedMoving?
-				continue;
-				//left_motor_set_speed(0);
-				//right_motor_set_speed(0);
+    	turn(searching);
+        searching = !found_lost_target_eric(searching);
+        if(searching!=TRUE && aligned == FALSE){
+        	aligned = P_control(get_angle_to_target());
         }
-        /*
-		*	To complete
-		*/
-        
-        //applies the speed from the PI regulator
-
-        /*
-		right_motor_set_speed(speed_left);
-		left_motor_set_speed(speed_right);
-
-
-		motor_left_position = left_motor_get_pos();
-		motor_right_position = right_motor_get_pos();
-
-		if (motor_left_position >= 1293){
-			speed_left=0;
-			speed_right=0;
-		}
-		*/
-        //100Hz
-        chThdSleepUntilWindowed(time, time + MS2ST(50)); //avant 10
+//
+//        switch (currentState){
+//			case Stop:
+//				left_motor_set_speed(0);
+//				right_motor_set_speed(0);
+//				continue;
+//
+//			case TurnAround:
+//				if (get_ongoing_state()!=1){
+//				turn_around();//�
+//				currentState = IncreaseRadius;
+//				}
+//				continue;
+//
+//			case IncreaseRadius:
+//				if (get_ongoing_state()!=1){
+//					increase_radius();
+//				}
+//				//forward_nb_steps(1);
+//				//turn(_LEFT);
+//				//currentState = TurnAround;
+//				continue;
+//
+//			case DoNothing_:
+//				continue;
+//
+//			case CurrentlyMoving:
+//				if (get_ongoing_state()!=1){
+//					currentState=FinishedMoving;
+//				} //faut faire un case FinishedMoving?
+//				continue;
+//				//left_motor_set_speed(0);
+//				//right_motor_set_speed(0);
+//        }
+//        /*
+//		*	To complete
+//		*/
+//
+//        //applies the speed from the PI regulator
+//
+//        /*
+//		right_motor_set_speed(speed_left);
+//		left_motor_set_speed(speed_right);
+//
+//
+//		motor_left_position = left_motor_get_pos();
+//		motor_right_position = right_motor_get_pos();
+//
+//		if (motor_left_position >= 1293){
+//			speed_left=0;
+//			speed_right=0;
+//		}
+//		*/
+//        //100Hz
+//        chThdSleepUntilWindowed(time, time + MS2ST(50)); //avant 10
+        chThdSleep(20);
     }
 }
 
@@ -362,4 +333,64 @@ void forward(Direction dir, uint16_t speed){
 		left_motor_set_speed(ZERO);
 		right_motor_set_speed(ZERO);
 	}
+}
+
+
+//implementation of eric functions =========================================================================
+uint8_t found_lost_target_eric(uint8_t mode){
+
+	//counts the number of times the object was detected
+	static uint8_t detection_counter;
+	if(target_detected_camera() == mode){
+		detection_counter++;
+	} else {
+		detection_counter = 0;
+	}
+
+	//returns true if the number of detections was sufficient for the object to be detected
+	//Also returns true when the object has not been proven to be absent
+	if(detection_counter>FRAMES_FOR_DETECTION){
+		detection_counter = 0;
+		return (TRUE==mode);
+	} else {
+		return (FALSE==mode);
+	}
+}
+
+uint8_t P_control(int error){
+	if(error > MIN_ANGLE || error < -MIN_ANGLE){
+		rotate_eric(INFINITE_ROTATION, 0, KP*error);
+		return FALSE;
+	}
+	else{
+		halt_robot_eric();
+		return TRUE;
+	}
+}
+
+
+//mode = 1 simply rotates with speed; mode = 2 rotates a certain angle with speed; mode = 0 Halts the robot
+void rotate_eric(uint8_t mode, Angle rotation_angle, Speed speed){
+	switch(mode){
+	  case 0:
+		    right_motor_set_speed(speed);
+		  	left_motor_set_speed(-speed);
+	    break;
+
+	  case 1:
+			rotate_angle_eric((int)speed, rotation_angle);
+		break;
+	}
+}
+
+//the angle given here uses a 1293 degrees as a full rotation (nb step necessary)
+void rotate_angle_eric(Speed speed, Angle angle_to_complete){
+	left_motor_set_speed_step((int)-speed, (uint32_t)angle_to_complete);
+	right_motor_set_speed_step((int)speed, (uint32_t)angle_to_complete);
+}
+
+//Halt the robot
+void halt_robot_eric(void){
+	left_motor_set_speed(0);
+	right_motor_set_speed(0);
 }

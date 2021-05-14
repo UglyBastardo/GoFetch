@@ -58,7 +58,7 @@ int main(void)
 	//inits the motors
 	motors_init();
 	//inits the core thread
-	big_brain_start();
+	//big_brain_start();
 
 	//stars the threads for the pi regulator and the processing of the image
 	pi_regulator_start();
