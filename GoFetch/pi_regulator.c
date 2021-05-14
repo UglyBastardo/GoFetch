@@ -285,6 +285,7 @@ void reset_number_step(void){
 }
 
 void forward_nb_steps(uint32_t steps_to_complete){
+	//ajouter sign(steps_to_complete?)
 	left_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);//créer pour aussi aller en arrière?
 	right_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);
 }

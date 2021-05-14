@@ -138,13 +138,13 @@ void update_target_pos(void){
 
 Angle calculate_revolution(void){
 
-	double distance_moved = (double)get_distance();
-	distance_moved += (double)(VL53L0X_get_dist_mm()*MM_TO_STEP);
-	double radius = (double)get_radius();
+	int16_t distance_moved = get_distance();
+	distance_moved += (VL53L0X_get_dist_mm()*MM_TO_STEP);
+	int16_t radius = get_radius();
 	double alpha = 0; //get_angle()
 	double dist = distance_moved*distance_moved + radius*radius - 2*distance_moved*radius*cos(PI/2+alpha);
-	//double rotation_angle = PI - acos((dist + distance_moved*distance_moved - radius^2)/(2*distance_moved*sqrt(dist)));
-	double rotation_angle = 0;
+	double rotation_angle = PI - acos((dist + distance_moved*distance_moved - radius*radius)/(2*distance_moved*sqrt(dist)));
+	//double rotation_angle = 0;
 	Angle angle_to_align = rotation_angle * MILIRAD_TO_RAD;
 
 
