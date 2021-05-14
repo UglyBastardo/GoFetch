@@ -9,6 +9,8 @@
 #include <pi_regulator.h>
 #include <process_image.h>
 #include <big_brain.h>
+#include <leds.h>
+//#include <proximity.h>
 
 #define INFINITE_ROTATION   1
 #define FINITE_ROTATION 	2
@@ -16,7 +18,7 @@
 #define LOSE_MODE 			0
 #define KP 					3
 #define MIN_ANGLE 			5
-#define FRAMES_FOR_DETECTION 10
+#define FRAMES_FOR_DETECTION 7
 //La partie d'Eric! Je vais faire à ma manière et tu peux changer si tu trouves que c'est pas adapté:
 
 /*
@@ -101,15 +103,38 @@ static THD_FUNCTION(PiRegulator, arg) {
     motor_right_position = right_motor_get_pos();
 	*/
     //int16_t speed = 400;
-
     static uint8_t searching = TRUE;
     static uint8_t aligned   = FALSE;
+    static uint32_t init_pos = 0; final_pos = 0;
+    static Angle delta_angle;
+
 
     while(1){
-    	turn(searching);
+//    	init_pos = left_motor_get_pos();
+    	rotate_eric(searching, 0, 200);
         searching = !found_lost_target_eric(searching);
-        if(searching!=TRUE && aligned == FALSE){
+        if(!searching){
         	aligned = P_control(get_angle_to_target());
+        }
+
+        if(aligned){
+        	set_led(LED1,1);
+        } else {
+        	set_led(LED1,0);
+        }
+
+        if(searching){
+        	set_body_led(1);
+        } else {
+        	set_body_led(0);
+        }
+
+//        final_pos = left_motor_get_pos();
+//        delta_angle = final_pos - init_pos;
+
+        //Attention, ici je ne sépare par les modes...
+        if(aligned){
+        	forward(NORMAL_SPEED);
         }
 //
 //        switch (currentState){
@@ -166,7 +191,7 @@ static THD_FUNCTION(PiRegulator, arg) {
 //		*/
 //        //100Hz
 //        chThdSleepUntilWindowed(time, time + MS2ST(50)); //avant 10
-        chThdSleep(20);
+        chThdSleepMilliseconds(20);
     }
 }
 
@@ -320,19 +345,21 @@ uint8_t finished_moving(void){
 	return 0;
 }
 
-void forward(Direction dir, uint16_t speed){
+void forward(int speed){
 	//left_motor_set_steps_to_complete(MAXSTEPS);
 	//right_motor_set_steps_to_complete(MAXSTEPS);
 
-	currentState = DoNothing_;
-
-	if(dir==-1 || dir==1){
-		left_motor_set_speed(speed*dir);
-		right_motor_set_speed(speed*dir);
-	} else {
-		left_motor_set_speed(ZERO);
-		right_motor_set_speed(ZERO);
-	}
+	left_motor_set_speed(speed);
+	right_motor_set_speed(speed);
+//	currentState = DoNothing_;
+//
+//	if(dir==-1 || dir==1){
+//		left_motor_set_speed(speed*dir);
+//		right_motor_set_speed(speed*dir);
+//	} else {
+//		left_motor_set_speed(ZERO);
+//		right_motor_set_speed(ZERO);
+//	}
 }
 
 
@@ -351,8 +378,10 @@ uint8_t found_lost_target_eric(uint8_t mode){
 	//Also returns true when the object has not been proven to be absent
 	if(detection_counter>FRAMES_FOR_DETECTION){
 		detection_counter = 0;
+		//returns true if the mode is find and false if the mode is not
 		return (TRUE==mode);
 	} else {
+		//returns true if the mode is find and false otherwise
 		return (FALSE==mode);
 	}
 }
@@ -369,15 +398,17 @@ uint8_t P_control(int error){
 }
 
 
-//mode = 1 simply rotates with speed; mode = 2 rotates a certain angle with speed; mode = 0 Halts the robot
+//mode = 1 simply rotates with speed;
+//mode = 2 rotates a certain angle with speed;
+//mode = 0 Halts the robot
 void rotate_eric(uint8_t mode, Angle rotation_angle, Speed speed){
 	switch(mode){
-	  case 0:
+	  case INFINITE_ROTATION:
 		    right_motor_set_speed(speed);
 		  	left_motor_set_speed(-speed);
 	    break;
 
-	  case 1:
+	  case FINITE_ROTATION:
 			rotate_angle_eric((int)speed, rotation_angle);
 		break;
 	}
