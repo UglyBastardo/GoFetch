@@ -10,12 +10,12 @@
 #define _FORWARD 1
 #define _BACKWARD -1
 #define MAXSTEPS 20000
-#define MILIRAD_TO_RAD 1000 //je le mets où?
+#define MILIRAD_TO_RAD 1000 //je le mets oï¿½?
 
 //start the PI regulator thread
 void pi_regulator_start(void);
 
-//pas forcémeent besoin de le mettre là?
+//pas forcï¿½meent besoin de le mettre lï¿½?
 enum motor_mode{Stop, TurnAround, IncreaseRadius, DoNothing_, CurrentlyMoving, FinishedMoving};
 
 //peut-etre creer son propre enum
@@ -59,6 +59,7 @@ void motor_search_ball(void);
 
 void motor_stop(void);
 
+uint8_t P_control(int error);
 //one-time read: 1:done moving 0:still moving
 //vraiment si utile le finishedmoving?
 uint8_t finished_moving(void);

@@ -8,6 +8,7 @@
 #include <process_image.h>
 #include <big_brain.h>
 #include <pi_regulator.h>
+#include <leds.h>
 
 //enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, Shoot, Victory};
 static enum Process_Mode mode = RotateAndSearch; // /!\
@@ -153,43 +154,88 @@ static enum Process_Mode mode = RotateAndSearch; // /!\
 //
 //
 //
-//static BSEMAPHORE_DECL(BigBrain_sem, TRUE);
-//
-//
-//static THD_WORKING_AREA(waBigBrain, 1024);
-//static THD_FUNCTION(BigBrain, arg) {
-//
-//    chRegSetThreadName(__FUNCTION__);
-//    (void)arg;
-//
-//
-//    while(mode!=Victory)
-//    {
-//      switch(mode)
-//      {
-//      //===============================================================================================================
-//        case DoNothing:
-//          continue;
-//
-//      //===============================================================================================================
-//        case RotateAndSearch:
-//        	motor_search_ball();
-//        	set_front_led(1);
-//        	if(target_detected()==1)
-//        	{
-//        		motor_stop();
-//        		set_front_led(0);
-//        		mode = Align;
-//        	} else {
+static BSEMAPHORE_DECL(BigBrain_sem, TRUE);
+
+
+static THD_WORKING_AREA(waBigBrain, 1024);
+static THD_FUNCTION(BigBrain, arg) {
+
+    chRegSetThreadName(__FUNCTION__);
+    (void)arg;
+
+
+    //declaration of variables for this thread
+	static uint8_t searching = TRUE, aligned = FALSE, begin_tracking = TRUE;
+    static uint32_t init_pos = 0, final_pos = 0;
+    static Angle delta_angle;
+
+    while(mode!=Victory)
+    {
+      switch(mode)
+      {
+      //===============================================================================================================
+        case DoNothing:
+          continue;
+
+      //===============================================================================================================
+        case RotateAndSearch:
+        	motor_search_ball();
+        	set_front_led(1);
+        	searching = !found_lost_target(searching);
+        	if(!searching)
+        	{
+        		motor_stop();
+        		set_front_led(0);
+        		mode = Align;
+        		begin_tracking = TRUE;
+        	}
+//        	else {
 //        		//turn(_RIGHT, NORMAL_SPEED);
 //        	}
-//
-//          continue;
-//
-//      //===============================================================================================================
-//        case Align:
-//
-//        	//First, the robot detects and aligns itself. If The target is no longer detected, it searches again.
+        	if(searching){
+				set_body_led(1);
+			} else {
+				set_body_led(0);
+			}
+
+          continue;
+
+      //===============================================================================================================
+        case Align:
+
+        	if(begin_tracking){
+        		init_pos = left_motor_get_pos();
+        		begin_tracking = FALSE;
+        	}
+
+			searching = !found_lost_target(searching);
+
+			//while the object is detected, the robot will align
+			//if the target is out of sight, the robot goes back to searching for it
+			if(!searching){
+				aligned = P_control(get_angle_to_target());
+			} else {
+				mode = RotateAndSearch;
+				begin_tracking = TRUE;
+				final_pos = left_motor_get_pos();
+				delta_angle = final_pos-init_pos;
+			}
+
+			//if the robot is aligned the mode will be set to forward and a calculation of the
+			//angular difference done and assigned to delta_angle
+			if(aligned){
+				mode = Forward;
+				set_led(LED1,1);
+				begin_tracking = TRUE;
+				final_pos = left_motor_get_pos();
+				delta_angle = final_pos-init_pos;
+			} else {
+				set_led(LED1,0);
+			}
+
+		//        final_pos = left_motor_get_pos();
+		//        delta_angle = final_pos - init_pos;
+		//First, the robot detects and aligns itself. If The target is no longer detected, it searches again.
 //        	if(target_detected()==1){
 //        		//rotate_angle(get_angle_to_target(), NORMAL_SPEED );
 //        		rotate_angle(get_angle_to_target());
@@ -198,74 +244,74 @@ static enum Process_Mode mode = RotateAndSearch; // /!\
 //        	} else {
 //        		mode = RotateAndSearch;
 //        	}
-//
-//        	/*
-//        	//Then, the robot decides what next move to do: go towards target if it is far enough and revolve around target if it is close enough
-//        	if(distance_to_target<MIN_DISTANCE || distance_to_target>MAX_DISTANCE){
-//        		mode = Forward;
-//        	} else {
-//        		mode = Revolve;
-//        	}
-//
-//        	//This last part updates the position and angular position of the robot
-//        	update_robot_angle();
-//			*/
-//          continue;
-//
-//        //j'ai pas trouv� plus beau comme mani�re de faire
-//        case FinishedAligning:
-//        	if (finished_moving()==1){
-//        		mode = Forward;
-//        	}
-//        	continue;
-//      //===============================================================================================================
-//        case Revolve:
-//
-//        	//This part uses the distance to the target and positions to decide on the sequence to follow to get behind it.
-//        	/*if(target_detected()){
-//        		revolve_around(calculate_revolution(), distance_to_target);
-//        	} else {
-//        		mode = RotateAndSearch;
-//        	}
-//        	*/
-//        	motor_stop();
-//        	set_body_led(1);
-//          continue;
-//
-//      //===============================================================================================================
-//        case Forward:
-//        	/*while(VL53L0X_get_dist_mm()>MAX_DISTANCE){
-//        		//risque de bug non?, monopolise les threads et si d�tecte pas objet -> boucle infini jusqu'� mur
-//        		motors_set_ongoing(TRUE);
-//        		forward(_FORWARD, NORMAL_SPEED);
-//        	}
-//        	while(VL53L0X_get_dist_mm()<MIN_DISTANCE)
-//        	{
-//        		motors_set_ongoing(TRUE);
-//        		forward(_BACKWARD, NORMAL_SPEED);
-//        	}
-//        	motors_set_ongoing(FALSE);
-//        	*/
-//        	if (target_detected()==1){
-//				if (VL53L0X_get_dist_mm()>MAX_DISTANCE){
-//					//set_front_led(1);
-//					forward(_FORWARD, SLOW_SPEED);
-//				} else if (VL53L0X_get_dist_mm()<MIN_DISTANCE){
-//					//set_front_led(0);
-//					forward(_BACKWARD, SLOW_SPEED);
-//				} else {
-//					//mode = Revolve;
-//					motor_stop();
-//					mode = Revolve;
-//				}
-//        	} else {
-//        		mode = RotateAndSearch;
-//        	}
-//
-//          continue;
-//
-//      //===============================================================================================================
-//        case Shoot:
+
+        	/*
+        	//Then, the robot decides what next move to do: go towards target if it is far enough and revolve around target if it is close enough
+        	if(distance_to_target<MIN_DISTANCE || distance_to_target>MAX_DISTANCE){
+        		mode = Forward;
+        	} else {
+        		mode = Revolve;
+        	}
+
+        	//This last part updates the position and angular position of the robot
+        	update_robot_angle();
+			*/
+          continue;
+
+        //j'ai pas trouv� plus beau comme mani�re de faire
+        case FinishedAligning:
+        	if (finished_moving()==1){
+        		mode = Forward;
+        	}
+        	continue;
+      //===============================================================================================================
+        case Revolve:
+
+        	//This part uses the distance to the target and positions to decide on the sequence to follow to get behind it.
+        	/*if(target_detected()){
+        		revolve_around(calculate_revolution(), distance_to_target);
+        	} else {
+        		mode = RotateAndSearch;
+        	}
+        	*/
+        	motor_stop();
+        	set_body_led(1);
+          continue;
+
+      //===============================================================================================================
+        case Forward:
+        	/*while(VL53L0X_get_dist_mm()>MAX_DISTANCE){
+        		//risque de bug non?, monopolise les threads et si d�tecte pas objet -> boucle infini jusqu'� mur
+        		motors_set_ongoing(TRUE);
+        		forward(_FORWARD, NORMAL_SPEED);
+        	}
+        	while(VL53L0X_get_dist_mm()<MIN_DISTANCE)
+        	{
+        		motors_set_ongoing(TRUE);
+        		forward(_BACKWARD, NORMAL_SPEED);
+        	}
+        	motors_set_ongoing(FALSE);
+        	*/
+        	if (target_detected()==1){
+				if (VL53L0X_get_dist_mm()>MAX_DISTANCE){
+					//set_front_led(1);
+					forward(_FORWARD, SLOW_SPEED);
+				} else if (VL53L0X_get_dist_mm()<MIN_DISTANCE){
+					//set_front_led(0);
+					forward(_BACKWARD, SLOW_SPEED);
+				} else {
+					//mode = Revolve;
+					motor_stop();
+					mode = Revolve;
+				}
+        	} else {
+        		mode = RotateAndSearch;
+        	}
+
+          continue;
+
+      //===============================================================================================================
+        case Shoot:
 //        	if(target_detected()) {
 //        		motors_set_ongoing(TRUE);
 //        		forward(_FORWARD, calculate_speed());
@@ -277,17 +323,17 @@ static enum Process_Mode mode = RotateAndSearch; // /!\
 //        		;//Je sais que cette merde a peu de sens et je compte bien la changer
 //        	}
 //        	motors_set_ongoing(FALSE);
-//        	mode = RotateAndSearch;
-//          continue;
-//      //===============================================================================================================
-//        case Victory:
-//        	//scream();
-//          continue;
-//      }
-//      chThdSleepMilliseconds(100);
-//    }
-//}
-//
-//void big_brain_start(void){
-//	chThdCreateStatic(waBigBrain, sizeof(waBigBrain), NORMALPRIO, BigBrain, NULL);
-//}
+        	mode = RotateAndSearch;
+          continue;
+      //===============================================================================================================
+        case Victory:
+        	//scream();
+          continue;
+      }
+      chThdSleepMilliseconds(100);
+    }
+}
+
+void big_brain_start(void){
+	chThdCreateStatic(waBigBrain, sizeof(waBigBrain), NORMALPRIO, BigBrain, NULL);
+}

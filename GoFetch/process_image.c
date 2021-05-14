@@ -37,6 +37,12 @@ static int target_position = 0; //angular position given in pixels with
 #define LINE_TO_READ_BEGIN  200
 #define NB_LINES_TO_READ 	2
 
+#define FIND_MODE			1
+#define LOSE_MODE 			0
+#define KP 					3
+#define MIN_ANGLE 			5
+#define FRAMES_FOR_DETECTION 7
+
 
 void calibrate_camera(uint8_t brightness, uint8_t contrast, uint8_t awb, uint8_t ae, uint8_t r_gain, uint8_t g_gain, uint8_t b_gain, uint16_t e_integral, uint8_t e_fractional){
 	po8030_set_brightness(brightness);
@@ -300,6 +306,28 @@ int get_angle_to_target(void){
 uint8_t target_detected_camera(void){
 //	return !(target_not_found | 0b11111110);
 	return (target_not_found == 0);
+}
+
+uint8_t found_lost_target(uint8_t mode){
+
+	//counts the number of times the object was detected
+	static uint8_t detection_counter;
+	if(target_detected_camera() == mode){
+		detection_counter++;
+	} else {
+		detection_counter = 0;
+	}
+
+	//returns true if the number of detections was sufficient for the object to be detected
+	//Also returns true when the object has not been proven to be absent
+	if(detection_counter>FRAMES_FOR_DETECTION){
+		detection_counter = 0;
+		//returns true if the mode is find and false if the mode is not
+		return (TRUE==mode);
+	} else {
+		//returns true if the mode is find and false otherwise
+		return (FALSE==mode);
+	}
 }
 
 void process_image_start(void){
