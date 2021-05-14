@@ -16,7 +16,7 @@
 void pi_regulator_start(void);
 
 //pas forc�meent besoin de le mettre l�?
-enum motor_mode{Stop, TurnAround, IncreaseRadius, DoNothing_, CurrentlyMoving, FinishedMoving};
+enum motor_mode{Stop, TurnAround, IncreaseRadius, DoNothing_, CurrentlyMoving, FinishedMoving, AlignPRegulator};
 
 //peut-etre creer son propre enum
 

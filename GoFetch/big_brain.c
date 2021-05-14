@@ -10,7 +10,7 @@
 #include <pi_regulator.h>
 #include <leds.h>
 
-//enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, Shoot, Victory};
+enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, Shoot, Victory};
 static enum Process_Mode mode = RotateAndSearch; // /!\
 
 #define STEPS_PER_ANGULAR_UNIT 	1
@@ -165,8 +165,8 @@ static THD_FUNCTION(BigBrain, arg) {
 
 
     //declaration of variables for this thread
-	static uint8_t searching = TRUE, aligned = FALSE, begin_tracking = TRUE;
-    static uint32_t init_pos = 0, final_pos = 0;
+	static uint8_t searching = TRUE; begin_tracking = TRUE;//aligned = FALSE;
+//    static uint32_t init_pos = 0, final_pos = 0;
     static Angle delta_angle;
 
     while(mode!=Victory)
@@ -202,9 +202,9 @@ static THD_FUNCTION(BigBrain, arg) {
 
       //===============================================================================================================
         case Align:
-
+//
         	if(begin_tracking){
-        		init_pos = left_motor_get_pos();
+        		set_P_regulator();
         		begin_tracking = FALSE;
         	}
 
@@ -212,23 +212,32 @@ static THD_FUNCTION(BigBrain, arg) {
 
 			//while the object is detected, the robot will align
 			//if the target is out of sight, the robot goes back to searching for it
-			if(!searching){
-				aligned = P_control(get_angle_to_target());
-			} else {
+//			if(!searching){
+//				aligned = P_control(get_angle_to_target());
+
+
+			//if the target has been lost
+			if(searching){
 				mode = RotateAndSearch;
 				begin_tracking = TRUE;
-				final_pos = left_motor_get_pos();
-				delta_angle = final_pos-init_pos;
+//				final_pos = left_motor_get_pos();
+//				delta_angle = final_pos-init_pos;
+				motor_stop();
+				delta_angle = left_motor_get_pos();
 			}
 
 			//if the robot is aligned the mode will be set to forward and a calculation of the
 			//angular difference done and assigned to delta_angle
-			if(aligned){
+
+
+			//if the robot has finished aligning
+			if(finished_moving()){
 				mode = Forward;
 				set_led(LED1,1);
 				begin_tracking = TRUE;
-				final_pos = left_motor_get_pos();
-				delta_angle = final_pos-init_pos;
+//				final_pos = left_motor_get_pos();
+//				delta_angle = final_pos-init_pos;
+				delta_angle = left_motor_get_pos();
 			} else {
 				set_led(LED1,0);
 			}
@@ -258,12 +267,12 @@ static THD_FUNCTION(BigBrain, arg) {
 			*/
           continue;
 
-        //j'ai pas trouv� plus beau comme mani�re de faire
-        case FinishedAligning:
-        	if (finished_moving()==1){
-        		mode = Forward;
-        	}
-        	continue;
+//        //j'ai pas trouv� plus beau comme mani�re de faire
+//        case FinishedAligning:
+//        	if (finished_moving()==1){
+//        		mode = Forward;
+//        	}
+//        	continue;
       //===============================================================================================================
         case Revolve:
 
@@ -292,15 +301,15 @@ static THD_FUNCTION(BigBrain, arg) {
         	}
         	motors_set_ongoing(FALSE);
         	*/
-        	if (target_detected()==1){
+        	searching = !found_lost_target(searching);
+        	if (!searching){
 				if (VL53L0X_get_dist_mm()>MAX_DISTANCE){
 					//set_front_led(1);
-					forward(_FORWARD, SLOW_SPEED);
+					forward(_FORWARD, NORMAL_SPEED);
 				} else if (VL53L0X_get_dist_mm()<MIN_DISTANCE){
 					//set_front_led(0);
 					forward(_BACKWARD, SLOW_SPEED);
 				} else {
-					//mode = Revolve;
 					motor_stop();
 					mode = Revolve;
 				}

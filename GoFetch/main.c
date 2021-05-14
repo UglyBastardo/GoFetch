@@ -60,7 +60,7 @@ int main(void)
 	//inits the motors
 	motors_init();
 	//inits the core thread
-	//big_brain_start();
+	big_brain_start();
 
 	//inits the proximity sensors
 //	proximity_start();
@@ -73,7 +73,7 @@ int main(void)
 	//turn_around();
 	//turn(1);
     /* Infinite loop. */
-	static uint8_t a = 0;
+//	static uint8_t a = 0;
 	//forward(_BACKWARD, SLOW_SPEED);
     while (1) {
     	//waits 1 second

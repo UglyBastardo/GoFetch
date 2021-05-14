@@ -169,6 +169,16 @@ static THD_FUNCTION(PiRegulator, arg) {
 				continue;
 				//left_motor_set_speed(0);
 				//right_motor_set_speed(0);
+
+			case AlignPRegulator:
+				if(P_control(get_angle_to_target())){
+					currentState = FinishedMoving;
+				}
+				continue;
+
+			default:
+				;
+				continue;
         }
 //        /*
 //		*	To complete
@@ -324,16 +334,16 @@ void motor_search_ball(void){
 }
 
 void motor_stop(void){
-	//to calculate the position according to the state it was in
-	enum motor_mode ancientState = currentState;
+//to calculate the position according to the state it was in
+//	enum motor_mode previousState = currentState;
+
 	currentState = Stop; // ===============================================================================0
-	/*switch (ancientState){
-		case TurnAround:
-			position_angle = right_motor_get_pos()*1000/(position_radius+DIST_WHEELS/2);
-			break;
-			//faut mettre un default?
-	}
-	*/
+//	switch (previousState){
+//		case TurnAround:
+//			position_angle = right_motor_get_pos()*1000/(position_radius+DIST_WHEELS/2);
+//			break;
+//			//faut mettre un default?
+//	}
 }
 
 
@@ -364,6 +374,10 @@ void forward(Direction dir, uint16_t speed){
 
 
 //implementation of eric functions =========================================================================
+void set_P_regulator(void){
+	reset_number_step();
+	currentState = AlignPRegulator;
+}
 
 uint8_t P_control(int error){
 	if(error > MIN_ANGLE || error < -MIN_ANGLE){
