@@ -8,21 +8,22 @@
 #include <motors.h>
 #include <process_image.h>
 #include <leds.h>
+#include <sensors/VL53L0X/VL53L0X.h>
 #include <movements.h>
 #include <sensors/proximity.h>
 
 #define SLOWSPEED 		220
 #define NORMALSPEED 	500
-#define TOLERANCE_FOR_ALIGNEMENT 7
+#define TOLERANCE_FOR_ALIGNEMENT 10
 #define MIN_DISTANCE_TO_TARGET 20
-#define WAIT_TIME 		100
+#define WAIT_TIME 		78
 
-#define PIover4			323 //steps for a quarter rotation
+#define PIover2			323 //steps for a quarter rotation
 #define PI				646 //steps for a half rotation
 #define TWOPI				1292//steps for a full rotation
 
 
-#define TEST4
+#define TEST5
 //#define PROJECT
 
 
@@ -42,7 +43,7 @@ static struct Field{
 
 void update_field(void);
 
-static THD_WORKING_AREA(waprogramRegulator, 512);
+static THD_WORKING_AREA(waprogramRegulator, 1024);
 static THD_FUNCTION(programRegulator, arg) {
 
     chRegSetThreadName(__FUNCTION__);
@@ -249,6 +250,133 @@ static THD_FUNCTION(programRegulator, arg) {
 			halt();
 			break;
 		}
+#endif
+
+#ifdef TEST4
+
+		static uint8_t test = 0;
+		switch(test){
+		case 0:
+			test = go_to_pos(field.xpos_rob,field.ypos_rob,field.robot_angle, -1000, -1000, 0, 350);
+			break;
+		case 1:
+			halt();
+			break;
+		}
+#endif
+
+#ifdef TEST5
+
+		static uint8_t test = 0;
+
+		static uint8_t aligned = 0;
+		static uint8_t searching = 1;
+
+//		static uint16_t robot_radius = 140, target_radius = 80;
+//		static uint32_t MAX_DISTANCE = 80, MIN_DISTANCE = 60;
+//		static uint16_t radius = 0;
+//		static uint8_t changing_mode;
+//		static uint8_t test2 = 0;
+
+
+		searching = !found_lost_target(searching);
+
+		    				if(searching){
+		    					set_body_led(1);
+		    				} else {
+		    					set_body_led(0);
+		    				}
+		switch(test){
+		case 0:
+			if(searching){
+				rotate(MODE_INFINITE, SLOWSPEED, 0);
+			} else {
+				halt();
+				test++;
+			}
+		  break;
+		case 1:
+			if(searching){
+				test = 0;
+				rotate(MODE_INFINITE, SLOWSPEED, 0);
+			}
+			else if(!aligned){
+				aligned = P_align(!aligned, -get_angle_to_target(), TOLERANCE_FOR_ALIGNEMENT);
+			}
+			else{
+				halt();
+				test++;
+			}
+		  break;
+		case 2:
+			if(searching){
+				test = 0;
+				rotate(MODE_INFINITE, SLOWSPEED, 0);
+			} else if (!aligned) {
+				test = 1;
+			} else {
+				forwards(MODE_INFINITE, NORMALSPEED, 0);
+			}
+		  break;
+		}
+#endif
+
+
+#ifdef TESTVLOX
+
+		static uint8_t test2 = 0;
+		static uint16_t robot_radius = 140, target_radius = 80;
+		static uint32_t MAX_DISTANCE = 80, MIN_DISTANCE = 60;
+		static uint16_t radius = 0;
+		static uint8_t changing_mode;
+
+		switch(test2){
+		case 0:
+		if (VL53L0X_get_dist_mm()>MAX_DISTANCE){
+			set_front_led(1);
+			set_body_led(0);
+			forwards(MODE_INFINITE, NORMALSPEED, 0);
+		} else if (VL53L0X_get_dist_mm()<MIN_DISTANCE){
+			set_front_led(1);
+			set_body_led(0);
+			forwards(MODE_INFINITE, -SLOWSPEED, 0);
+		} else {
+			set_front_led(0);
+			set_body_led(1);
+			test2 = 1;
+			halt();
+		}
+		break;
+
+		case 1:
+			radius = VL53L0X_get_dist_mm()*8 + target_radius+robot_radius;
+			test2 =2;
+		  break;
+		case 2:
+			if(verify_done_moving(MODE_FINITE, NORMALSPEED, PIover2, rotate)){
+				test2 = 3;
+			}
+		  break;
+		case 3:
+			if(!get_ongoing_state() && changing_mode){
+				reset_step_count();
+				changing_mode = FALSE;
+			}
+			else if(!get_ongoing_state() && !changing_mode){
+				test2++;
+				changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
+			}
+					set_front_led(1);
+			if(revolve(MODE_FINITE, NORMALSPEED, radius, CLOCK, 60*radius)){
+				test2++;
+				changing_mode = TRUE;
+			}
+		  break;
+		case 4:
+			halt();
+		break;
+		}
+
 #endif
 
         chThdSleepMilliseconds(WAIT_TIME);

@@ -12,7 +12,7 @@
  *
  */
 //================================================================================
-#define KP 				1
+#define KP 				2
 #define PIover2Steps 	323 //steps
 #define PISteps			646 //steps
 #define PI				3.1416 //no unit
@@ -97,10 +97,13 @@ uint8_t go_to_pos(double xinit, double yinit, double angle_init, double xfinal, 
 
 	case Rotate2:
 
-		if(angle_to_cover>0){
-			done = verify_done_moving(MODE_FINITE, execution_speed, (int)((angle_final-angle_to_cover)*PISteps/PI), rotate);
+		set_body_led(1);
+		angle_to_cover = angle_final-angle_to_cover;
+
+		if(angle_to_cover){
+			done = verify_done_moving(MODE_FINITE, execution_speed, (int)((angle_to_cover)*PISteps/PI), rotate);
 		} else if (angle_to_cover <0){
-			done = verify_done_moving(MODE_FINITE, -execution_speed, (int)((angle_to_cover-angle_final)*PISteps/PI), rotate);
+			done = verify_done_moving(MODE_FINITE, -execution_speed, (int)((-angle_to_cover)*PISteps/PI), rotate);
 		} else {
 			halt();
 		}

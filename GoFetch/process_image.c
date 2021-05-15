@@ -19,7 +19,7 @@ static int target_position = 0; //angular position given in pixels with
 #define NOISE_LEVEL			3
 #define MEDIAN_OFFSET		NOISE_LEVEL
 #define MAX_PX_VALUE		32
-#define OFFSET				12			//Offset if the number to substract from max_px_value to find the threshhold value
+#define OFFSET				15			//Offset if the number to substract from max_px_value to find the threshhold value
 
 
 #define RED					0
@@ -171,7 +171,7 @@ static THD_FUNCTION(CaptureImage, arg) {
 		chBSemSignal(&image_ready_sem);
     }
 
-    chThdSleepMilliseconds(30);
+    chThdSleepMilliseconds(50);
 
 }
 
@@ -274,8 +274,8 @@ int get_angle_to_target(void){
 }
 
 void process_image_start(void){
-	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage, NULL);
-	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
+	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage+1, NULL);
+	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage+1, NULL);
 }
 
 

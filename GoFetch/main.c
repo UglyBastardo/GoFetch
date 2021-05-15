@@ -13,8 +13,8 @@
 #include <motors.h>
 #include <camera/po8030.h>
 #include <chprintf.h>
-//#include <sensors/VL53L0X/VL53L0X.h>
-#include <sensors/proximity.h>
+#include <sensors/VL53L0X/VL53L0X.h>
+//#include <sensors/proximity.h>
 
 //#include <pi_regulator.h>
 #include <program_regulator.h>
@@ -57,7 +57,7 @@ int main(void)
     dcmi_start();
 	po8030_start();
 	//starts the ToF sensor
-//	VL53L0X_start();
+	VL53L0X_start();
 	//inits the motors
 	motors_init();
 	//inits the core thread

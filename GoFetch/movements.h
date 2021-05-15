@@ -34,7 +34,8 @@ uint8_t P_align(uint8_t ongoing, int error, int tolerance);
 //Goes to the RIGHT=1 or to the LEFT=0
 uint8_t translational_movement(int side, int delta_radius, int execution_speed);
 
-
+//is a slower function for bring the robot whereever we want it to be
+uint8_t go_to_pos(double xinit, double yinit, double angle_init, double xfinal, double yfinal, double angle_final, int execution_speed);
 
 //================================================================================
 /*	Begin of the Simple Movement Functions
