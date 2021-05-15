@@ -9,7 +9,8 @@
 
 #include <process_image.h>
 
-static uint8_t target_not_found = 0;
+//AATTTTTTTEEENNNNNTIIIIIIIIIIIOOOOOOONNNNNNNNN
+static uint8_t target_not_found_ = 0;
 static int target_position = 0; //angular position given in pixels with
 
 #define WIDTH_SLOPE 		5
@@ -19,8 +20,8 @@ static int target_position = 0; //angular position given in pixels with
 #define NOISE_LEVEL			3
 #define MEDIAN_OFFSET		NOISE_LEVEL
 #define MAX_PX_VALUE		32
-#define OFFSET				14			//Offset if the number to substract from max_px_value to find the threshhold value
-
+#define OFFSET				15			//Offset if the number to substract from max_px_value to find the threshhold value
+//descend --> selectif
 
 #define RED					0
 #define GREEN 				1
@@ -42,6 +43,7 @@ static int target_position = 0; //angular position given in pixels with
 #define KP 					3
 #define MIN_ANGLE 			5
 #define FRAMES_FOR_DETECTION 7
+//
 
 
 void calibrate_camera(uint8_t brightness, uint8_t contrast, uint8_t awb, uint8_t ae, uint8_t r_gain, uint8_t g_gain, uint8_t b_gain, uint16_t e_integral, uint8_t e_fractional){
@@ -65,7 +67,7 @@ void update_target_detection(uint8_t *buffer){
 
 	uint16_t i = 0, begin = 0, end = 0;
 	uint8_t stop = 0, wrong_target = 0;
-	target_not_found = 0;
+	uint8_t target_not_found = 0;
 	uint32_t mean = 0;
 
 
@@ -127,7 +129,9 @@ void update_target_detection(uint8_t *buffer){
 	if(target_not_found){
 		begin = 0;
 		end = 0;
+		target_not_found_ = target_not_found;
 	}else{
+		target_not_found_ = target_not_found;
 		target_position = (begin + end - IMAGE_BUFFER_SIZE)/2; //gives the target position relativ to the center of the image.
 	}
 
@@ -247,7 +251,7 @@ static THD_FUNCTION(CaptureImage, arg) {
 		chBSemSignal(&image_ready_sem);
     }
 
-    chThdSleepMilliseconds(30);
+//    chThdSleepMilliseconds(100);
 
 }
 
@@ -276,7 +280,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 
 		send_to_computer = !send_to_computer;
-		if(target_not_found) {
+		if(target_not_found_) {
 			set_led(LED5,0);
 		} else {
 			set_led(LED5,1);
@@ -296,6 +300,9 @@ static THD_FUNCTION(ProcessImage, arg) {
 //			SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
 //		}
 		//invert the bool
+
+		//y'avait pas avant jsp pas f voulu ^^'
+//		chThdSleepMilliseconds(100);
     }
 }
 
@@ -305,13 +312,13 @@ int get_angle_to_target(void){
 
 uint8_t target_detected_camera(void){
 //	return !(target_not_found | 0b11111110);
-	return (target_not_found == 0);
+	return (target_not_found_ == 0);
 }
 
 uint8_t found_lost_target(uint8_t mode){
 
 	//counts the number of times the object was detected
-	static uint8_t detection_counter;
+	static uint8_t detection_counter = 0;
 	if(target_detected_camera() == mode){
 		detection_counter++;
 	} else {
@@ -332,7 +339,7 @@ uint8_t found_lost_target(uint8_t mode){
 
 void process_image_start(void){
 	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage, NULL);
-	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
+	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO+10, CaptureImage, NULL);
 }
 
 

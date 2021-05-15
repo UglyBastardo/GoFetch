@@ -16,7 +16,7 @@
 void pi_regulator_start(void);
 
 //pas forc�meent besoin de le mettre l�?
-enum motor_mode{Stop, TurnAround, IncreaseRadius, DoNothing_, CurrentlyMoving, FinishedMoving, AlignPRegulator};
+enum motor_mode{Stop, TurnAround, IncreaseRadius, DoNothing_, CurrentlyMoving, FinishedMoving, AlignPRegulator, Forward_};
 
 //peut-etre creer son propre enum
 
@@ -59,7 +59,9 @@ void motor_search_ball(void);
 
 void motor_stop(void);
 
-uint8_t P_control(int error);
+//uint8_t P_control(int err);
+
+void set_P_regulator(void);
 //one-time read: 1:done moving 0:still moving
 //vraiment si utile le finishedmoving?
 uint8_t finished_moving(void);

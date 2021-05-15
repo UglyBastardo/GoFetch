@@ -47,9 +47,9 @@ int main(void)
     mpu_init();
 
     //starts the serial communication
-    serial_start();
+//    serial_start();
     //start the USB communication
-    usb_start();
+//    usb_start();
     //start the i2c communication for the ToF sensor
     i2c_start();
     //starts the camera
@@ -60,21 +60,22 @@ int main(void)
 	//inits the motors
 	motors_init();
 	//inits the core thread
-	big_brain_start();
 
 	//inits the proximity sensors
 //	proximity_start();
 
-	//stars the threads for the pi regulator and the processing of the image
-	pi_regulator_start();
+	//stars the threads for the pi regulator and the processing of the image$
 	process_image_start();
+	pi_regulator_start();
 
+	big_brain_start();
 	//test
 	//turn_around();
 	//turn(1);
     /* Infinite loop. */
+//
 //	static uint8_t a = 0;
-	//forward(_BACKWARD, SLOW_SPEED);
+//	forward(_BACKWARD, SLOW_SPEED);
     while (1) {
     	//waits 1 second
     	/*if (VL53L0X_get_dist_mm()<500){
@@ -82,6 +83,12 @@ int main(void)
     	} else {
     		set_body_led(0);
     	}*/
+//    	if (a!=3){
+//    		a++;
+//    	} else {
+//    		mode_();
+//    	}
+
     	/*if (a==0){
     		forward(_BACKWARD, SLOW_SPEED);
     		//left_motor_set_speed(SLOW_SPEED);

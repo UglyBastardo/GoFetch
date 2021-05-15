@@ -11,7 +11,7 @@
 #include <leds.h>
 
 enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, Shoot, Victory};
-static enum Process_Mode mode = RotateAndSearch; // /!\
+static enum Process_Mode mode = RotateAndSearch;
 
 #define STEPS_PER_ANGULAR_UNIT 	1
 #define MIN_DISTANCE 		  	40 		//mm
@@ -154,10 +154,10 @@ static enum Process_Mode mode = RotateAndSearch; // /!\
 //
 //
 //
-static BSEMAPHORE_DECL(BigBrain_sem, TRUE);
+//static BSEMAPHORE_DECL(BigBrain_sem, TRUE);
 
 
-static THD_WORKING_AREA(waBigBrain, 1024);
+static THD_WORKING_AREA(waBigBrain, 2048);
 static THD_FUNCTION(BigBrain, arg) {
 
     chRegSetThreadName(__FUNCTION__);
@@ -165,10 +165,11 @@ static THD_FUNCTION(BigBrain, arg) {
 
 
     //declaration of variables for this thread
-	static uint8_t searching = TRUE; begin_tracking = TRUE;//aligned = FALSE;
+	static uint8_t searching = TRUE;
+	static uint8_t begin_tracking = TRUE;//aligned = FALSE;
 //    static uint32_t init_pos = 0, final_pos = 0;
-    static Angle delta_angle;
-
+    static Angle delta_angle = 0;
+//    static uint8_t bug_deb = 0;
     while(mode!=Victory)
     {
       switch(mode)
@@ -182,21 +183,21 @@ static THD_FUNCTION(BigBrain, arg) {
         	motor_search_ball();
         	set_front_led(1);
         	searching = !found_lost_target(searching);
-        	if(!searching)
-        	{
+//        	searching = TRUE;
+
+        	if(!searching){
         		motor_stop();
+        		set_body_led(1);
         		set_front_led(0);
         		mode = Align;
         		begin_tracking = TRUE;
         	}
+//        	} else if (!searching){
+//        		bug_deb++;
+//        	}
 //        	else {
 //        		//turn(_RIGHT, NORMAL_SPEED);
 //        	}
-        	if(searching){
-				set_body_led(1);
-			} else {
-				set_body_led(0);
-			}
 
           continue;
 
@@ -238,6 +239,8 @@ static THD_FUNCTION(BigBrain, arg) {
 //				final_pos = left_motor_get_pos();
 //				delta_angle = final_pos-init_pos;
 				delta_angle = left_motor_get_pos();
+//				set_led(LED1,1);
+//				mode = DoNothing;
 			} else {
 				set_led(LED1,0);
 			}
@@ -285,6 +288,7 @@ static THD_FUNCTION(BigBrain, arg) {
         	*/
         	motor_stop();
         	set_body_led(1);
+        	set_front_led(1);
           continue;
 
       //===============================================================================================================
@@ -339,10 +343,14 @@ static THD_FUNCTION(BigBrain, arg) {
         	//scream();
           continue;
       }
-      chThdSleepMilliseconds(100);
+      chThdSleepMilliseconds(200);
     }
 }
 
 void big_brain_start(void){
 	chThdCreateStatic(waBigBrain, sizeof(waBigBrain), NORMALPRIO, BigBrain, NULL);
 }
+
+//void mode_(void){
+//	mode = RotateAndSearch;
+//}

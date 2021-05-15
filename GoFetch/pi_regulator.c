@@ -33,7 +33,7 @@ void rotate_angle(Angle angle_to_complete, Angular_speed angular_speed){
 
 
 
-uint8_t P_control(int error); //returns true if the robot is aligned
+uint8_t P_control(int err); //returns true if the robot is aligned
 void rotate_eric(uint8_t mode, Angle rotation_angle, Speed speed);
 void rotate_angle_eric(Speed speed, Angle angle_to_complete);
 void halt_robot_eric(void);
@@ -70,9 +70,9 @@ static int16_t speed_right = 200;
 //static Process_mode mode = DoNothing;
 //robot position in cylindrical coordinates
 static int16_t position_radius = DIST_WHEELS/2; //unity steps
-static int16_t position_angle = 0; // unity mRad
+//static int16_t position_angle = 0; // unity mRad
 
-static enum motor_mode currentState = DoNothing_;
+static enum motor_mode currentState = Stop;
 
 
 //void turn_around();
@@ -87,7 +87,7 @@ void set_mode(Process_mode mode_){
 }
 */
 
-static THD_WORKING_AREA(waPiRegulator, 256);
+static THD_WORKING_AREA(waPiRegulator, 512);
 static THD_FUNCTION(PiRegulator, arg) {
 
     chRegSetThreadName(__FUNCTION__);
@@ -110,6 +110,7 @@ static THD_FUNCTION(PiRegulator, arg) {
 //
 //
     while(1){
+    	time = chVTGetSystemTime();
 ////    	init_pos = left_motor_get_pos();
 //    	rotate_eric(searching, 0, 200);
 //        searching = !found_lost_target_eric(searching);
@@ -178,7 +179,6 @@ static THD_FUNCTION(PiRegulator, arg) {
 
 			default:
 				;
-				continue;
         }
 //        /*
 //		*	To complete
@@ -200,7 +200,7 @@ static THD_FUNCTION(PiRegulator, arg) {
 //		}
 //		*/
 //        //100Hz
-      chThdSleepUntilWindowed(time, time + MS2ST(50)); //avant 10
+      chThdSleepUntilWindowed(time, time + MS2ST(100)); //avant 10
 //        chThdSleepMilliseconds(20);
     }
 }
@@ -336,8 +336,9 @@ void motor_search_ball(void){
 void motor_stop(void){
 //to calculate the position according to the state it was in
 //	enum motor_mode previousState = currentState;
-
-	currentState = Stop; // ===============================================================================0
+	currentState = DoNothing_;
+	halt_robot_eric();
+//	currentState = Stop; // ===============================================================================0
 //	switch (previousState){
 //		case TurnAround:
 //			position_angle = right_motor_get_pos()*1000/(position_radius+DIST_WHEELS/2);
@@ -349,7 +350,7 @@ void motor_stop(void){
 
 uint8_t finished_moving(void){
 	if (currentState == FinishedMoving){
-		currentState = DoNothing;
+		currentState = DoNothing_;
 		return 1;
 	}
 	return 0;
@@ -361,7 +362,9 @@ void forward(Direction dir, uint16_t speed){
 
 //	left_motor_set_speed(speed);
 //	right_motor_set_speed(speed);
-	currentState = DoNothing_;
+//	if (currentState != Forward_){
+//	set_body_led(0);
+	currentState = Forward_;
 
 	if(dir==-1 || dir==1){
 		left_motor_set_speed(speed*dir);
@@ -370,6 +373,8 @@ void forward(Direction dir, uint16_t speed){
 		left_motor_set_speed(ZERO);
 		right_motor_set_speed(ZERO);
 	}
+//	currentState = Forward_;
+//	}
 }
 
 
@@ -379,9 +384,9 @@ void set_P_regulator(void){
 	currentState = AlignPRegulator;
 }
 
-uint8_t P_control(int error){
-	if(error > MIN_ANGLE || error < -MIN_ANGLE){
-		rotate_eric(INFINITE_ROTATION, 0, KP*error);
+uint8_t P_control(int err){
+	if(err > MIN_ANGLE || err < -MIN_ANGLE){
+		rotate_eric(INFINITE_ROTATION, 0, KP*err);
 		return FALSE;
 	}
 	else{

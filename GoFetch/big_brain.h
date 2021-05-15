@@ -4,8 +4,10 @@
 #endif /* BIG_BRAIN_H */
 
 
-enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, Shoot, Victory};
+//enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, Shoot, Victory};
 
 void 	big_brain_start(void);
+
+//void mode_(void);
 
 void 	set_distance_to_target(uint16_t* new_distance_to_target);
