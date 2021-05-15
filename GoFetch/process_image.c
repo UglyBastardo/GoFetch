@@ -9,7 +9,7 @@
 
 #include <process_image.h>
 
-static uint8_t target_not_found = 0;
+static uint8_t target_not_found = 0, searching = TRUE, aligned = FALSE;
 static int target_position = 0; //angular position given in pixels with
 
 #define WIDTH_SLOPE 		5
@@ -37,6 +37,14 @@ static int target_position = 0; //angular position given in pixels with
 #define LINE_TO_READ_BEGIN  200
 #define NB_LINES_TO_READ 	2
 
+#define FRAMES_FOR_DETECTION 7
+#define MIN_TOLERANCE_FOR_ALIGNEMENT 5
+
+//=================================================================
+/*
+ * internal Functions
+ */
+//=================================================================
 
 void calibrate_camera(uint8_t brightness, uint8_t contrast, uint8_t awb, uint8_t ae, uint8_t r_gain, uint8_t g_gain, uint8_t b_gain, uint16_t e_integral, uint8_t e_fractional){
 	po8030_set_brightness(brightness);
@@ -125,96 +133,18 @@ void update_target_detection(uint8_t *buffer){
 		target_position = (begin + end - IMAGE_BUFFER_SIZE)/2; //gives the target position relativ to the center of the image.
 	}
 
-//
-//	//=======================================================================================================================================
-//	uint16_t i = 0, begin = 0, end = 0;
-//	uint16_t target_begin = 0, target_end = 0;
-//	uint8_t stop = 0,  target_count = 0;
-//	uint8_t _target_not_found = 0;
-//
-//	do{
-//
-//										//=====================================================================
-//										//search for a begin
-//		while(stop == 0 && i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))
-//		{
-//			//the slope must at least be WIDTH_SLOPE wide and is compared
-//			//to the mean of the image
-//			if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i+WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
-//			{
-//				begin = i;
-//				i+=WIDTH_SLOPE;
-//				stop = 1;
-//			}
-//			i++;
-//		}
-//
-//										//=====================================================================
-//										//if a begin was found, search for an end
-//		if (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE) && begin)
-//		{
-//			stop = 0;
-//
-//			while(stop == 0 && i < IMAGE_BUFFER_SIZE)
-//			{
-//				if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i-WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
-//				{
-//					end = i;
-//					i+= WIDTH_SLOPE;
-//					stop = 1;
-//				}
-//				i++;
-//			}
-//			//if an end was not found
-//			if (i > IMAGE_BUFFER_SIZE || !end)
-//			{
-//				_target_not_found = 1;
-//			}
-//		}
-//		else//if no begin was found
-//		{
-//			_target_not_found = 1;
-//		}
-//
-//										//=====================================================================
-//										//if a target too small has been detected, continues the search
-//		if(!_target_not_found && (end-begin) < MIN_WIDTH_PIXELS){
-//			begin = 0;
-//			end = 0;
-//			stop = 0;
-//		} else if (!_target_not_found){
-//			target_count++;
-//			target_begin = begin;
-//			target_end = end;
-//		}
-//
-//										//=====================================================================
-//										//if multiple targets have been detected abort search
-//		if(target_count > 1){
-//			set_led(LED5,TRUE);
-//			break;
-//		}
-//
-//	}while(i < IMAGE_BUFFER_SIZE);
-//
-//
-//										//=====================================================================
-//										//setting controler led for if multiple targets detected
-//	if(target_count < 2){
-//		set_led(LED5,FALSE);
-//	}
-//
-//										//=====================================================================
-//										//Updating static values
-//	if(target_count == 1){
-//		target_not_found = 0;
-//		target_position = (target_end+target_begin)>>1;
-//	}
-//	else{
-//		target_not_found = 1;
-//		target_position = 0;
-//	}
 }
+
+uint8_t target_detected_camera(void){
+//	return !(target_not_found | 0b11111110);
+	return (target_not_found == 0);
+}
+
+//=================================================================
+/*
+ * Threads
+ */
+//=================================================================
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
@@ -268,6 +198,14 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//search for a target in the image and gets its position in pixels
 		update_target_detection(image);
 
+		//searching will be true as long as a detection was not made during a sufficient amount of frames FRAMES_FOR_DETECTION
+		//It will not go back to true as long as it was "not found" for a consecutive amount of frames FRAMES_FOR_DETECTION
+		searching = !found_lost_target(searching);
+
+		//the target is aligned once the camera is no longer searching & the target is in the center +- MIN_TOLERANCE_FOR_ALIGNEMENT pixels
+		aligned = (!searching && target_position<MIN_TOLERANCE_FOR_ALIGNEMENT && target_position>-MIN_TOLERANCE_FOR_ALIGNEMENT);
+
+
 
 		send_to_computer = !send_to_computer;
 		if(target_not_found) {
@@ -293,13 +231,45 @@ static THD_FUNCTION(ProcessImage, arg) {
     }
 }
 
-int get_angle_to_target(void){
-	return -target_position;
+//=================================================================
+/*
+ * Public Functions
+ */
+//=================================================================
+
+
+uint8_t found_lost_target(uint8_t mode){
+
+	//counts the number of times the object was detected
+	static uint8_t detection_counter;
+	if(target_detected_camera() == mode){
+		detection_counter++;
+	} else {
+		detection_counter = 0;
+	}
+
+	//returns true if the number of detections was sufficient for the object to be detected
+	//Also returns true when the object has not been proven to be absent
+	if(detection_counter>FRAMES_FOR_DETECTION){
+		detection_counter = 0;
+		//returns true if the mode is find and false if the mode is not
+		return (TRUE==mode);
+	} else {
+		//returns true if the mode is find and false otherwise
+		return (FALSE==mode);
+	}
 }
 
-uint8_t target_detected_camera(void){
-//	return !(target_not_found | 0b11111110);
-	return (target_not_found == 0);
+uint8_t get_searching(void){
+	return searching;
+}
+
+uint8_t get_aligned(void){
+	return aligned;
+}
+
+int get_angle_to_target(void){
+	return -target_position;
 }
 
 void process_image_start(void){
