@@ -18,8 +18,18 @@
 #define WAIT_TIME 		100
 
 
-#define TEST2
+#define TEST3
 //#define PROJECT
+
+
+
+//Definition of static variables for definition of the Field;
+
+
+
+
+
+void update_field(void);
 
 static THD_WORKING_AREA(waprogramRegulator, 512);
 static THD_FUNCTION(programRegulator, arg) {
@@ -28,7 +38,7 @@ static THD_FUNCTION(programRegulator, arg) {
     (void)arg;
 #ifdef PROJECT
 	static int robot_angle = 0;
-
+	static uint8_t changing_mode = TRUE;
 	static uint8_t searching = TRUE;
 	static uint8_t aligned   = FALSE;
 	static enum process {SearchAndAlign, GoToTarget, AroundTarget, Shoot} process = SearchAndAlign;
@@ -37,6 +47,7 @@ static THD_FUNCTION(programRegulator, arg) {
     while(1){
 
 #ifdef PROJECT
+
 
     	searching = !found_lost_target(searching);
 //    	searching=0;
@@ -52,8 +63,8 @@ static THD_FUNCTION(programRegulator, arg) {
     		reset_step_count();
     		if(searching){
     			rotate(MODE_INFINITE, SLOWSPEED, 0);
-			}else if (!aligned){
-				aligned = P_align(!searching, get_angle_to_target(), 7);
+			}else if(!aligned){
+				aligned = P_align(!searching, get_angle_to_target(), TOLERANCE_FOR_ALIGNEMENT);
 			}else{
 				process = GoToTarget;
 				halt();
@@ -151,35 +162,56 @@ static THD_FUNCTION(programRegulator, arg) {
 #ifdef TEST2
    //Test 2
     	static uint8_t test = 0;
+    	static uint8_t changing_mode = 1;
 
 		switch(test){
 		case 0:
-			if(!get_ongoing_state()){
+			if(!get_ongoing_state() && changing_mode){
 				reset_step_count();
-				set_led(LED1,1);
+				changing_mode = FALSE;
 			}
-					set_front_led(1);
-			if(forwards(MODE_FINITE, 500, 2000)){
+			else if(!get_ongoing_state() && !changing_mode){
 				test++;
-				set_led(LED3,1);
+				changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
+			}
+					set_front_led(1);
+			if(forwards(MODE_FINITE, -500, 5000)){
+				test++;
+				changing_mode = TRUE;
 			}
 					set_led(LED5,1);
 			break;
+
 		case 1:
-					set_led(LED1,0);
-					set_front_led(1);
-					set_led(LED5,0);
-					reset_step_count();
-			if(forwards(MODE_FINITE, 500, 500)) test++;
+			if(!get_ongoing_state() && changing_mode){
+				reset_step_count();
+				changing_mode = FALSE;
+			}
+			else if(!get_ongoing_state() && !changing_mode){
+				test++;
+				changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
+			}
+			if(rotate(MODE_FINITE, 500, 2000)){
+				test++;
+				changing_mode = TRUE;
+			}
+						break;
 			break;
+
 		case 2:
-					set_led(LED1,0);
-					set_front_led(0);
-					set_led(LED5,1);
-			if(rotate(MODE_FINITE, 500, 400)) test++;
-			break;
-		case 3:
-			if(revolve(MODE_FINITE, 500, 500, TRIGONOMETRIC, 500)) test=0;
+			if(!get_ongoing_state() && changing_mode){
+				reset_step_count();
+				changing_mode = FALSE;
+			}
+			else if(!get_ongoing_state() && !changing_mode){
+				test++;
+				changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
+			}
+			if(rotate(MODE_FINITE, -500, 2000)){
+				test++;
+				changing_mode = TRUE;
+			}
+						break;
 			break;
 		}
 #endif
@@ -190,13 +222,12 @@ static THD_FUNCTION(programRegulator, arg) {
 		static uint8_t test = 0;
 		switch(test){
 		case 0:
-			if(translational_movement(RIGHT, 500, 400)){
+			if(translational_movement(RIGHT, 2000, 400)){
 				test++;
 			}
 			break;
 		case 1:
 			halt();
-			test--;
 			break;
 		}
 #endif

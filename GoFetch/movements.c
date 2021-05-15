@@ -28,34 +28,62 @@ uint8_t P_align(uint8_t ongoing, int error, int tolerance){
 uint8_t translational_movement(int side, int delta_radius, int execution_speed){
 
 	static enum mode {Rotate1, Forwards , Rotate2} mode = Rotate1;
-	static uint8_t done = FALSE;
+	static uint8_t done = FALSE, changing_mode = TRUE;
 	//tracking is done using motor going forward first
 	switch(mode){
 
 	case Rotate1:
+		if(!get_ongoing_state() && changing_mode){
+			reset_step_count();
+			changing_mode = FALSE;
+		}
+		else if(!get_ongoing_state() && !changing_mode){
+			mode = Forwards;
+			changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
+		}
+				set_front_led(1);
 		if(rotate(MODE_FINITE, side*execution_speed, PIover2)){
 			mode = Forwards;
+			changing_mode = TRUE;
 		}
 		break;
 
 	case Forwards:
+		if(!get_ongoing_state() && changing_mode){
+			reset_step_count();
+			changing_mode = FALSE;
+		}
+		else if(!get_ongoing_state() && !changing_mode){
+			mode = Rotate2;
+			changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
+		}
+				set_front_led(1);
 		if(forwards(MODE_FINITE, execution_speed, delta_radius)){
 			mode = Rotate2;
+			changing_mode = TRUE;
 		}
 		break;
 
 	case Rotate2:
-		if(rotate(MODE_FINITE, -side*execution_speed, PIover2)){
+		if(!get_ongoing_state() && changing_mode){
+			reset_step_count();
+			changing_mode = FALSE;
+		}
+		else if(!get_ongoing_state() && !changing_mode){
 			done = TRUE;
+			changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
+		}
+				set_front_led(1);
+		if(rotate(MODE_FINITE, side*execution_speed, PIover2)){
+			done = TRUE;
+			changing_mode = TRUE;
 		}
 		break;
+
 	}
 
 	return done;
 }
-
-
-
 
 
 
@@ -90,6 +118,7 @@ uint8_t forwards(uint8_t mode, int speed, uint32_t nbSteps){
 		  right_motor_set_speed(0);
 		break;
 	}
+
 
 	return !get_ongoing_state();
 
