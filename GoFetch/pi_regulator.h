@@ -12,7 +12,9 @@
 #define MAXSTEPS 20000
 #define MILIRAD_TO_RAD 1000 //je le mets où?
 #define MM_TO_STEP 7.69
-#define PI 3.14159265
+#define PI 3.1415926
+#define FULL_TURN 1213
+#define QUARTER_TURN FULL_TURN/4
 
 //start the PI regulator thread
 void pi_regulator_start(void);
@@ -107,5 +109,9 @@ int16_t get_radius(void);
 *
 */
 uint8_t finished_moving(void);
+
+void forward_nb_steps(uint32_t steps_to_complete);
+
+void get_around(Angle angle_to_revolve, uint16_t radius_of_revolution);
 
 #endif /* PI_REGULATOR_H */

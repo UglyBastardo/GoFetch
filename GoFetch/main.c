@@ -45,9 +45,9 @@ int main(void)
     mpu_init();
 
     //starts the serial communication
-    serial_start();
+//    serial_start();
     //start the USB communication
-    usb_start();
+//    usb_start();
     //start the i2c communication for the ToF sensor
     i2c_start();
     //starts the camera
@@ -62,13 +62,13 @@ int main(void)
 
 	//stars the threads for the pi regulator and the processing of the image
 	pi_regulator_start();
-	//process_image_start();
+//	process_image_start();
 
 	//test
 	//turn_around();
 	//turn(1);
     /* Infinite loop. */
-	static uint8_t a = 0;
+//	static uint8_t a = 0;
 	//forward(_BACKWARD, SLOW_SPEED);
     while (1) {
     	//waits 1 second

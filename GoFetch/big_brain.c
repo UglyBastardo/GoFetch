@@ -8,9 +8,10 @@
 #include <process_image.h>
 #include <big_brain.h>
 #include <pi_regulator.h>
+#include <leds.h>
 
 //enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, Shoot, Victory};
-static enum Process_Mode mode = RotateAndSearch; // /!\
+static enum Process_Mode mode = RotateAndSearch; //
 
 #define STEPS_PER_ANGULAR_UNIT 	1
 #define MIN_DISTANCE 		  	40 		//mm
@@ -21,6 +22,7 @@ static enum Process_Mode mode = RotateAndSearch; // /!\
 //===============================================================================
 //dayan
 #define MAX_DETECTION_DISTANCE 500 //mm
+#define CHECK_TRESHOLD 3
 
 //regarde s'il détecte un objet
 uint8_t target_detected(void);
@@ -40,35 +42,35 @@ int32_t calculate_distance(void){
 	int16_t distance_moved = get_distance();
 	distance_moved += VL53L0X_get_dist_mm()*MM_TO_STEP;
 	int16_t radius = get_radius();
-	double alpha = 0; //get_angle()
-	int32_t dist = sqrt(distance_moved*distance_moved + radius*radius - 2*distance_moved*radius*cos(PI/2+alpha));
+//	double alpha = 0; //get_angle()
+//	int32_t dist = sqrt(distance_moved*distance_moved + radius*radius - 2*distance_moved*radius*cos(PI/2+alpha));
+	uint32_t dist = sqrt(distance_moved*distance_moved + radius*radius);
 
+//	if(dist<150){
+//		set_front_led(1);
+//	}
 	return dist;
 }
 
 uint8_t target_detected(void){
-	if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE){
-		return 1;
-	}
-	return 0;
-	/*
+//	if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE){
+//		return 1;
+//	}
+//	return 0;
+
+//	return line_detected();
 	static uint8_t check=0; //pas sûr du nom
-	if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE && check==0){
+	if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE && check<=CHECK_TRESHOLD){
 		check++;
 		return 0; //Object detected
-	} else if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE && check==1){
-		set_front_led(1);
-		check++;
-		return 0;
-	} else if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE && check==2){
-		set_front_led(0);
-		check = 0;
+	} else if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE){
+//		set_front_led(1);
+//		check++;
 		return 1;
 	} else {
 		check = 0;
 		return 0;
 	}
-	*/
 }
 
 //==================================================================================
@@ -77,7 +79,7 @@ static Position robot_pos = {0, 0};
 static Position target_pos  = {0, 0};
 
 
-static Bool ongoing = false;
+//static Bool ongoing = false;
 static uint16_t distance_to_target = ZERO;
 
 //===============================================================================================================
@@ -141,15 +143,21 @@ Angle calculate_revolution(void){
 	double distance_moved = (double)get_distance();
 	distance_moved += (double)(VL53L0X_get_dist_mm()*MM_TO_STEP);
 	double radius = (double)get_radius();
-	double alpha = 0; //get_angle()
-	double dist = distance_moved*distance_moved + radius*radius - 2*distance_moved*radius*cos(PI/2+alpha);
-	//double rotation_angle = PI - acos((dist + distance_moved*distance_moved - radius^2)/(2*distance_moved*sqrt(dist)));
-	double rotation_angle = 0;
-	Angle angle_to_align = rotation_angle * MILIRAD_TO_RAD;
-
-
+//	double alpha = 0; //get_angle()
+//	double dist = distance_moved*distance_moved + radius*radius - 2*distance_moved*radius*cos(PI/2+alpha);
+	double dist = sqrt(distance_moved*distance_moved + radius*radius);
+//	double rotation_angle = PI - acos((dist + distance_moved*distance_moved - radius*radius)/(2*distance_moved*sqrt(dist)));
+	double rotation_angle = PI - acos(distance_moved/dist);
+//	dist = distance_moved/dist;
+//	double rotation_angle = PI;
+//	double rotation_angle = 0;
+	rotation_angle *= MILIRAD_TO_RAD;
+//	Angle angle_to_align = rotation_angle * MILIRAD_TO_RAD;
+	Angle angle_to_align = ceil(rotation_angle);
 	//to Complete
-
+	if (angle_to_align==0){
+			set_body_led(1);
+	}
 	return angle_to_align;
 }
 
@@ -170,15 +178,15 @@ uint16_t calculate_speed(void){
 *
 * @param
 */
-uint8_t is_hit(void){
-	/*
-	 * To Complete: becomes true once robot_pos = target_pos
-	 */
-}
+//uint8_t is_hit(void){
+//	/*
+//	 * To Complete: becomes true once robot_pos = target_pos
+//	 */
+//}
 
 
 
-static BSEMAPHORE_DECL(BigBrain_sem, TRUE);
+//static BSEMAPHORE_DECL(BigBrain_sem, TRUE);
 
 
 static THD_WORKING_AREA(waBigBrain, 1024);
@@ -217,7 +225,7 @@ static THD_FUNCTION(BigBrain, arg) {
         	//First, the robot detects and aligns itself. If The target is no longer detected, it searches again.
         	if(target_detected()==1){
         		//rotate_angle(get_angle_to_target(), NORMAL_SPEED );
-        		rotate_angle(get_angle_to_target());
+//        		rotate_angle(get_angle_to_target());
         		//mode = FinishedAligning;
         		mode = Forward;
         	} else {
@@ -248,14 +256,14 @@ static THD_FUNCTION(BigBrain, arg) {
 
         	//This part uses the distance to the target and positions to decide on the sequence to follow to get behind it.
         	if(target_detected()==1){
-        		revolve_around(calculate_revolution(), VL53L0X_get_dist_mm()*MM_TO_STEP);
+        		get_around(calculate_revolution(), VL53L0X_get_dist_mm()*MM_TO_STEP);
         		mode = Shoot;
         	} else {
         		mode = RotateAndSearch;
         	}
 
-        	motor_stop();
-        	set_body_led(1);
+//        	motor_stop();
+//        	set_body_led(1);
           continue;
 
       //===============================================================================================================
@@ -306,9 +314,13 @@ static THD_FUNCTION(BigBrain, arg) {
         	motors_set_ongoing(FALSE);
         	mode = RotateAndSearch;
         	*/
+//        	set_front_led(1);
+        	//mauvais code danger finished moving one time read
         	if(target_detected() && finished_moving()){
         		forward_nb_steps(calculate_distance());
-        		mode = Victory;
+//        		forward_nb_steps(500);
+        		set_body_led(1);
+        		mode = DoNothing;
         	}
           continue;
       //===============================================================================================================

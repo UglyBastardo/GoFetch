@@ -23,7 +23,7 @@ void rotate_angle(Angle angle_to_complete, Angular_speed angular_speed){
 */
 
 
-void forward_nb_steps(uint32_t steps_to_complete);
+//void forward_nb_steps(uint32_t steps_to_complete);
 
 /* --> dans ma partie
 void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
@@ -59,7 +59,7 @@ static int16_t position_radius = DIST_WHEELS/2; //unity steps
 //pas sûr de ça (mettre en 32?)
 static int16_t distance = 0;
 
-enum motor_mode{Stop, TurnAround, IncreaseRadius, DoNothing_, CurrentlyMoving, FinishedMoving, Forward_};
+enum motor_mode{Stop, TurnAround, IncreaseRadius, DoNothing_, CurrentlyMoving, FinishedMoving, Forward_, GetAround};
 static enum motor_mode currentState = DoNothing_;
 
 
@@ -141,6 +141,12 @@ static THD_FUNCTION(PiRegulator, arg) {
 				continue;
 				//left_motor_set_speed(0);
 				//right_motor_set_speed(0);
+			case GetAround:
+				if (get_ongoing_state()!=1){
+					get_around(0,0);
+				}
+			default:
+				;
         }
         /*
 		*	To complete
@@ -189,8 +195,8 @@ void turn(Direction dir){
 		left_motor_set_speed(ZERO);
 	}*/
 	reset_number_step();
-	left_motor_set_speed_step(dir*NORMAL_SPEED, dir*DIST_WHEELS*PI/4);//magic number
-	right_motor_set_speed_step(-dir*NORMAL_SPEED, -dir*DIST_WHEELS*PI/4);
+	left_motor_set_speed_step(dir*NORMAL_SPEED, dir*QUARTER_TURN);//magic number
+	right_motor_set_speed_step(-dir*NORMAL_SPEED, -dir*QUARTER_TURN);
 	/*while (get_ongoing_state() == 1){
 			chThdSleepMilliseconds(10);
 	}*/
@@ -201,7 +207,7 @@ void turn(Direction dir){
 
 void increase_radius(void){
 	//turn right, move forward and then turn left to increase the radius
-	static int8_t state=0;
+	static uint8_t state=0;
 	switch(state){
 		case 0:
 			turn(_RIGHT);
@@ -263,7 +269,7 @@ void turn_around(void){
 
 void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 
-	currentState = DoNothing_;
+//	currentState = DoNothing_;
 
 	int16_t speed_left = ((radius_of_revolution - DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
 	int16_t speed_right = ((radius_of_revolution+ DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
@@ -276,7 +282,7 @@ void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 	left_motor_set_speed_step(speed_left, left_distance);
 	right_motor_set_speed_step(speed_right, right_distance);
 
-	currentState = CurrentlyMoving;
+//	currentState = CurrentlyMoving;
 }
 
 void reset_number_step(void){
@@ -285,6 +291,13 @@ void reset_number_step(void){
 }
 
 void forward_nb_steps(uint32_t steps_to_complete){
+
+	reset_number_step();
+
+	if (currentState!=IncreaseRadius){
+		currentState = CurrentlyMoving;
+	}
+
 	left_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);//créer pour aussi aller en arrière?
 	right_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);
 }
@@ -352,3 +365,33 @@ int16_t get_radius(void){
 	return position_radius;
 }
 
+void get_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
+	static uint8_t ar_state = 0;
+	static Angle ar_angle = 0;
+	static uint16_t ar_radius = 0;
+	if (currentState != GetAround){
+		currentState = GetAround;
+		ar_radius = radius_of_revolution;
+		ar_angle = angle_to_revolve;
+		ar_state=0;
+	}
+	switch(ar_state){
+		case 0:
+			turn(_RIGHT);
+			ar_state++;
+			break;
+		case 1:
+			revolve_around(ar_angle, ar_radius);
+			ar_state++;
+			break;
+		case 2:
+			turn(_LEFT);
+			ar_state++;
+			break;
+		case 3:
+			currentState=FinishedMoving;
+			break;
+		default:
+			;
+	}
+}
