@@ -12,6 +12,7 @@
 
 #define SLOWSPEED 		150
 #define NORMALSPEED 	500
+#define TOLERANCE_FOR_ALIGNEMENT 7
 
 
 //#define TEST3
@@ -23,21 +24,44 @@ static THD_FUNCTION(programRegulator, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
-    static uint8_t rotating = FALSE, do_not_search = 0;
+	static uint8_t searching = TRUE;
+	static uint8_t aligned   = FALSE;
+	static uint32_t init_pos = 0, final_pos = 0;
+	static Angle delta_angle;
+
+
     while(1){
+
 #ifdef PROJECT
 
 
-    	if(get_searching()){
-    		rotating = TRUE;
-    		rotate(MODE_INFINITE, 150, 0);
-    	}
-    	else if(!get_aligned()){
-    		P_align(rotating, get_angle_to_target());
-    	}
-    	else{
-    		halt();
-    	}
+
+//    	init_pos = left_motor_get_pos();
+		rotate(MODE_INFINITE, SLOWSPEED, 0);
+		searching = !found_lost_target(searching);
+		if(!searching){
+			aligned = P_align(!searching, get_angle_to_target(), 7);
+		}
+
+		if(aligned){
+			set_led(LED1,1);
+		} else {
+			set_led(LED1,0);
+		}
+
+		if(searching){
+			set_body_led(1);
+		} else {
+			set_body_led(0);
+		}
+
+//        final_pos = left_motor_get_pos();
+//        delta_angle = final_pos - init_pos;
+
+		//Attention, ici je ne sépare par les modes...
+		if(aligned){
+			forwards(MODE_INFINITE, SLOWSPEED,0);
+		}
 
 
 #endif
@@ -132,7 +156,7 @@ static THD_FUNCTION(programRegulator, arg) {
 		}
 #endif
 
-        chThdSleepMilliseconds(3000);
+        chThdSleepMilliseconds(30);
     }
 }
 

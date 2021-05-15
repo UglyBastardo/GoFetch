@@ -37,7 +37,7 @@ static int target_position = 0; //angular position given in pixels with
 #define LINE_TO_READ_BEGIN  200
 #define NB_LINES_TO_READ 	2
 
-#define FRAMES_FOR_DETECTION 7
+#define FRAMES_FOR_DETECTION 3
 #define MIN_TOLERANCE_FOR_ALIGNEMENT 5
 
 //=================================================================

@@ -16,9 +16,10 @@
 #include <sensors/VL53L0X/VL53L0X.h>
 //#include <proximity.h>
 
-#include <pi_regulator.h>
+//#include <pi_regulator.h>
+#include <program_regulator.h>
 #include <process_image.h>
-#include <big_brain.h>
+//#include <big_brain.h>
 
 void SendUint8ToComputer(uint8_t* data, uint16_t size) 
 {
@@ -66,8 +67,9 @@ int main(void)
 //	proximity_start();
 
 	//stars the threads for the pi regulator and the processing of the image
-	pi_regulator_start();
+//	pi_regulator_start();
 	process_image_start();
+	program_regulator_start();
 
 	//test
 	//turn_around();

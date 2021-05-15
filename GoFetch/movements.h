@@ -19,7 +19,7 @@
  */
 //================================================================================
 //make the motor rotate with speed proportional to error as long as mode ongoing is set;
-void P_align(uint8_t ongoing, int error);
+uint8_t P_align(uint8_t ongoing, int error, int tolerance);
 
 //changes the radius of the robots revolution.
 //Goes to the RIGHT=1 or to the LEFT=0

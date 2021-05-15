@@ -15,11 +15,13 @@
 #define PIover2 323 //steps
 
 
-void P_align(uint8_t ongoing, int error){
-	if(ongoing){
+uint8_t P_align(uint8_t ongoing, int error, int tolerance){
+	if(ongoing && (error>tolerance || error<-tolerance)){
 		rotate(MODE_INFINITE, KP*error, 0);
+		return FALSE;
 	} else {
 		halt();
+		return TRUE;
 	}
 }
 
