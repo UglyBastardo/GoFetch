@@ -12,9 +12,9 @@
 #include <movements.h>
 #include <sensors/proximity.h>
 
-#define SLOWSPEED 		220
+#define SLOWSPEED 		160
 #define NORMALSPEED 	500
-#define TOLERANCE_FOR_ALIGNEMENT 10
+#define TOLERANCE_FOR_ALIGNEMENT 2
 #define MIN_DISTANCE_TO_TARGET 20
 #define WAIT_TIME 		78
 
@@ -267,58 +267,110 @@ static THD_FUNCTION(programRegulator, arg) {
 
 #ifdef TEST5
 
-//		static uint8_t test = 0;
-//
-//		static uint8_t aligned = 0;
+		static uint8_t test = 0;
+
+		static uint8_t aligned = 0;
 		static uint8_t searching = 1;
 
-//		static uint16_t robot_radius = 140, target_radius = 80;
-//		static uint32_t MAX_DISTANCE = 80, MIN_DISTANCE = 60;
-//		static uint16_t radius = 0;
-//		static uint8_t changing_mode;
-//		static uint8_t test2 = 0;
+		static uint16_t robot_radius = 140, target_radius = 80;
+		static uint32_t MAX_DISTANCE = 80, MIN_DISTANCE = 60;
+		static uint16_t radius = 0;
+		static uint8_t changing_mode;
+		static uint8_t test2 = 0;
 
 
 		searching = !found_lost_target(searching);
 
-		if(searching){
-			set_body_led(1);
-		} else {
-			set_body_led(0);
+						if(searching){
+							set_body_led(1);
+						} else {
+							set_body_led(0);
+						}
+		switch(test){
+		case 0:
+			if(searching){
+				rotate(MODE_INFINITE, SLOWSPEED, 0);
+			} else {
+				halt();
+				test++;
+			}
+		  break;
+		case 1:
+			if(searching){
+				test = 0;
+				rotate(MODE_INFINITE, SLOWSPEED, 0);
+			}
+			else if(!aligned){
+				aligned = P_align(!aligned, get_angle_to_target(), TOLERANCE_FOR_ALIGNEMENT);
+			}
+			else{
+				halt();
+				test++;
+			}
+		  break;
+		case 2:
+			if(searching){
+				test = 0;
+				rotate(MODE_INFINITE, SLOWSPEED, 0);
+			} else if (!aligned) {
+				test = 1;
+			} else {
+				forwards(MODE_INFINITE, NORMALSPEED, 0);
+				if (VL53L0X_get_dist_mm()<2*MAX_DISTANCE){
+					test = 3;
+				}
+			}
+		  break;
+		case 3:
+			if (VL53L0X_get_dist_mm()>MAX_DISTANCE){
+				set_front_led(1);
+				set_body_led(0);
+				forwards(MODE_INFINITE, NORMALSPEED, 0);
+			} else if (VL53L0X_get_dist_mm()<MIN_DISTANCE){
+				set_front_led(1);
+				set_body_led(0);
+				forwards(MODE_INFINITE, -SLOWSPEED, 0);
+			} else {
+				set_front_led(0);
+				set_body_led(1);
+				test = 4;
+				halt();
+			}
+		  break;
+		case 4:
+			if(verify_done_moving(MODE_FINITE, NORMALSPEED, PIover2, rotate)){
+				test = 5;
+			}
+		  break;
+		case 5:
+			if(!get_ongoing_state() && changing_mode){
+				reset_step_count();
+				changing_mode = FALSE;
+			}
+			else if(!get_ongoing_state() && !changing_mode){
+				test = 6;
+				changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
+			}
+					set_front_led(1);
+			if(revolve(MODE_FINITE, NORMALSPEED, radius, CLOCK, 60*radius)){
+				test = 6;
+				changing_mode = TRUE;
+			}
+		  break;
+		case 6:
+			if(verify_done_moving(MODE_FINITE, -NORMALSPEED, PIover2, rotate)){
+				test = 7;
+			}
+		  break;
+		case 7:
+			if(verify_done_moving(MODE_FINITE, NORMALSPEED, 3000, forwards)){
+				test = 8;
+			}
+		  break;
+		case 8:
+			rotate(MODE_INFINITE, NORMALSPEED*2, 0);
+		  break;
 		}
-//		switch(test){
-//		case 0:
-//			if(searching){
-//				rotate(MODE_INFINITE, SLOWSPEED, 0);
-//			} else {
-//				halt();
-//				test++;
-//			}
-//		  break;
-//		case 1:
-//			if(searching){
-//				test = 0;
-//				rotate(MODE_INFINITE, SLOWSPEED, 0);
-//			}
-//			else if(!aligned){
-//				aligned = P_align(!aligned, -get_angle_to_target(), TOLERANCE_FOR_ALIGNEMENT);
-//			}
-//			else{
-//				halt();
-//				test++;
-//			}
-//		  break;
-//		case 2:
-//			if(searching){
-//				test = 0;
-//				rotate(MODE_INFINITE, SLOWSPEED, 0);
-//			} else if (!aligned) {
-//				test = 1;
-//			} else {
-//				forwards(MODE_INFINITE, NORMALSPEED, 0);
-//			}
-//		  break;
-//		}
 #endif
 
 

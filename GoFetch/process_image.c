@@ -12,14 +12,14 @@
 static uint8_t target_not_found = 0; //searching = TRUE, aligned = FALSE;
 static int target_position = 0; //angular position given in pixels with
 
-#define WIDTH_SLOPE 		8
+#define WIDTH_SLOPE 		10
 #define MIN_WIDTH_PIXELS	30
 #define MIN_HALFWIDTH_PX	15
-#define MIN_OFFSET 			3
-#define NOISE_LEVEL			3
+#define MIN_OFFSET 			2
+#define NOISE_LEVEL			6
 #define MEDIAN_OFFSET		NOISE_LEVEL
 #define MAX_PX_VALUE		32
-#define OFFSET				11			//Offset if the number to substract from max_px_value to find the threshhold value
+#define OFFSET				14			//Offset if the number to substract from max_px_value to find the threshhold value
 
 
 #define RED					0
@@ -37,8 +37,7 @@ static int target_position = 0; //angular position given in pixels with
 #define LINE_TO_READ_BEGIN  200
 #define NB_LINES_TO_READ 	2
 
-#define FRAMES_FOR_DETECTION 8
-#define MIN_TOLERANCE_FOR_ALIGNEMENT 5
+#define FRAMES_FOR_DETECTION 3
 
 //=================================================================
 /*
@@ -194,14 +193,6 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		//search for a target in the image and gets its position in pixels
 		update_target_detection(image);
-
-		//searching will be true as long as a detection was not made during a sufficient amount of frames FRAMES_FOR_DETECTION
-		//It will not go back to true as long as it was "not found" for a consecutive amount of frames FRAMES_FOR_DETECTION
-//		searching = !found_lost_target(searching);
-
-		//the target is aligned once the camera is no longer searching & the target is in the center +- MIN_TOLERANCE_FOR_ALIGNEMENT pixels
-//		aligned = (!searching && target_position<MIN_TOLERANCE_FOR_ALIGNEMENT && target_position>-MIN_TOLERANCE_FOR_ALIGNEMENT);
-
 
 
 //		send_to_computer = !send_to_computer;
