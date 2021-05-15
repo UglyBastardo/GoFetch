@@ -57,14 +57,14 @@ int main(void)
     dcmi_start();
 	po8030_start();
 	//starts the ToF sensor
-	VL53L0X_start();
+//	VL53L0X_start();
 	//inits the motors
 	motors_init();
 	//inits the core thread
 	//big_brain_start();
 
 	//inits the proximity sensors
-	proximity_start();
+//	proximity_start();
 
 	//stars the threads for the pi regulator and the processing of the image
 //	pi_regulator_start();
