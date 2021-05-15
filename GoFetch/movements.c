@@ -4,6 +4,7 @@
 #include <motors.h>
 #include <movements.h>
 
+
 //================================================================================
 /*	Begin of the Complicated Movement Functions
  *  These need to be put into a thread
@@ -11,8 +12,10 @@
  *
  */
 //================================================================================
-#define KP 		1
-#define PIover2 323 //steps
+#define KP 				1
+#define PIover2Steps 	323 //steps
+#define PISteps			646 //steps
+#define PI				3.1416 //no unit
 
 
 uint8_t P_align(uint8_t ongoing, int error, int tolerance){
@@ -28,55 +31,25 @@ uint8_t P_align(uint8_t ongoing, int error, int tolerance){
 uint8_t translational_movement(int side, int delta_radius, int execution_speed){
 
 	static enum mode {Rotate1, Forwards , Rotate2} mode = Rotate1;
-	static uint8_t done = FALSE, changing_mode = TRUE;
+	static uint8_t done = FALSE;
 	//tracking is done using motor going forward first
 	switch(mode){
 
 	case Rotate1:
-		if(!get_ongoing_state() && changing_mode){
-			reset_step_count();
-			changing_mode = FALSE;
-		}
-		else if(!get_ongoing_state() && !changing_mode){
+		if(verify_done_moving(MODE_FINITE, -side*execution_speed, PIover2Steps, rotate)){
 			mode = Forwards;
-			changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
-		}
-				set_front_led(1);
-		if(rotate(MODE_FINITE, side*execution_speed, PIover2)){
-			mode = Forwards;
-			changing_mode = TRUE;
 		}
 		break;
 
 	case Forwards:
-		if(!get_ongoing_state() && changing_mode){
-			reset_step_count();
-			changing_mode = FALSE;
-		}
-		else if(!get_ongoing_state() && !changing_mode){
+		if(verify_done_moving(MODE_FINITE, execution_speed, delta_radius, forwards)){
 			mode = Rotate2;
-			changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
-		}
-				set_front_led(1);
-		if(forwards(MODE_FINITE, execution_speed, delta_radius)){
-			mode = Rotate2;
-			changing_mode = TRUE;
 		}
 		break;
 
 	case Rotate2:
-		if(!get_ongoing_state() && changing_mode){
-			reset_step_count();
-			changing_mode = FALSE;
-		}
-		else if(!get_ongoing_state() && !changing_mode){
+		if(verify_done_moving(MODE_FINITE, side*execution_speed, PIover2Steps, rotate)){
 			done = TRUE;
-			changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
-		}
-				set_front_led(1);
-		if(rotate(MODE_FINITE, side*execution_speed, PIover2)){
-			done = TRUE;
-			changing_mode = TRUE;
 		}
 		break;
 
@@ -85,14 +58,63 @@ uint8_t translational_movement(int side, int delta_radius, int execution_speed){
 	return done;
 }
 
+uint8_t go_to_pos(double xinit, double yinit, double angle_init, double xfinal, double yfinal, double angle_final, int execution_speed){
+	double dx = xfinal-xinit;
+	double dy = yfinal-yinit;
+	static uint8_t done = FALSE;
 
+	double angle_to_cover = atan2(dy, dx)-angle_init;  //angle needed to turn to be looking at destination
+	double distance_to_cover = sqrt(dx*dx +dy*dy);	   //distance to destination
+
+	static enum mode {Rotate1, Forwards , Rotate2} mode = Rotate1;
+
+
+	switch(mode){
+
+	case Rotate1:
+	//Very dangerous coding... we shall see the results
+		if(angle_to_cover>0){
+			if(verify_done_moving(MODE_FINITE, execution_speed, (int)(angle_to_cover*PISteps/PI), rotate)){
+				mode = Forwards;
+			}
+		} else if (angle_to_cover <0){
+			if(verify_done_moving(MODE_FINITE, -execution_speed, (int)(-angle_to_cover*PISteps/PI), rotate)){
+				mode = Forwards;
+			}
+		} else {
+			halt();
+			mode = Forwards;
+		}
+
+	break;
+
+	case Forwards:
+		if(verify_done_moving(MODE_FINITE, execution_speed, (int)distance_to_cover, forwards)){
+			mode = Rotate2;
+		}
+
+	break;
+
+	case Rotate2:
+
+		if(angle_to_cover>0){
+			done = verify_done_moving(MODE_FINITE, execution_speed, (int)((angle_final-angle_to_cover)*PISteps/PI), rotate);
+		} else if (angle_to_cover <0){
+			done = verify_done_moving(MODE_FINITE, -execution_speed, (int)((angle_to_cover-angle_final)*PISteps/PI), rotate);
+		} else {
+			halt();
+		}
+	  break;
+	}
+	return done;
+}
 
 
 //================================================================================
 /*	Begin of the Simple Movement Functions
  *
- *	!!!!!!
- *	revolution calculation is not functional
+ *
+ *
  */
 //================================================================================
 #define RADIUS_ROBOT 192 //unity: steps (0.13mm)
@@ -196,3 +218,31 @@ void reset_step_count(void){
 	left_motor_set_pos(0);
 	right_motor_set_pos(0);
 }
+
+//================================================================================
+/*	Begin of the complicated internal non movement functions
+ *
+ *
+ *
+ */
+//================================================================================
+uint8_t verify_done_moving(uint8_t mode, int speed, uint32_t nbSteps, uint8_t (*f)(uint8_t, int, uint32_t)){
+	static uint8_t changing_mode = TRUE;
+	if(changing_mode) set_led(LED1, 1); else set_led(LED1, 0);
+	if(!get_ongoing_state() && changing_mode){
+		reset_step_count();
+		changing_mode = FALSE;
+	}
+	else if(!get_ongoing_state() && !changing_mode){
+		changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
+		return TRUE;
+	}
+	if((*f)(mode, speed, nbSteps)){
+		changing_mode = TRUE;
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+

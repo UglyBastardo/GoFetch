@@ -11,6 +11,15 @@
 #define RIGHT 			1
 #define LEFT 			-1
 
+//================================================================================
+/*	Some functions to make life easier
+ *
+ *
+ */
+//================================================================================
+uint8_t verify_done_moving(uint8_t mode, int speed, uint32_t nbSteps, uint8_t (*f)(uint8_t, int, uint32_t));
+
+
 
 //================================================================================
 /*	Begin of the Complicated Movement Functions

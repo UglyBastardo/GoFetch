@@ -14,16 +14,6 @@ extern "C" {
 #define IMAGE_BUFFER_SIZE		640
 #define ZERO 					0
 
-typedef int32_t		Angle;
-typedef int			Speed;
-typedef int8_t 		Direction; //utile?????
-typedef uint8_t		Bool;
-
-typedef struct Position {
-	uint16_t xPosition;
-	uint16_t yPosition;
-} Position;
-
 /** Robot wide IPC bus. */
 extern messagebus_t bus;
 

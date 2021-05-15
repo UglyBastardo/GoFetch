@@ -17,14 +17,25 @@
 #define MIN_DISTANCE_TO_TARGET 20
 #define WAIT_TIME 		100
 
+#define PIover4			323 //steps for a quarter rotation
+#define PI				646 //steps for a half rotation
+#define TWOPI				1292//steps for a full rotation
 
-#define TEST3
+
+#define TEST4
 //#define PROJECT
 
 
 
 //Definition of static variables for definition of the Field;
 
+static struct Field{
+	int xpos_rob;
+	int ypos_rob;
+	int xpos_target;
+	int ypos_target;
+	int robot_angle;
+} field = {0,0,0,0,0};
 
 
 
@@ -36,9 +47,10 @@ static THD_FUNCTION(programRegulator, arg) {
 
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
+
+
 #ifdef PROJECT
 	static int robot_angle = 0;
-	static uint8_t changing_mode = TRUE;
 	static uint8_t searching = TRUE;
 	static uint8_t aligned   = FALSE;
 	static enum process {SearchAndAlign, GoToTarget, AroundTarget, Shoot} process = SearchAndAlign;
@@ -48,9 +60,8 @@ static THD_FUNCTION(programRegulator, arg) {
 
 #ifdef PROJECT
 
-
+    	//constantly searching for if the target is in sight =========
     	searching = !found_lost_target(searching);
-//    	searching=0;
 
     				if(searching){
     					set_body_led(1);
@@ -58,7 +69,12 @@ static THD_FUNCTION(programRegulator, arg) {
     					set_body_led(0);
     				}
 
+    	//Switch for the different robot modes
+
+
     	switch(process){
+
+    	//======================================================================================
     	case SearchAndAlign:
     		reset_step_count();
     		if(searching){
@@ -79,6 +95,7 @@ static THD_FUNCTION(programRegulator, arg) {
 
     	  break;
 
+    	//======================================================================================
     	case GoToTarget:
 
 //    		if(get_prox(1)<MIN_DISTANCE_TO_TARGET){
@@ -87,9 +104,11 @@ static THD_FUNCTION(programRegulator, arg) {
 //    		}
     	  break;
 
+    	//======================================================================================
     	case AroundTarget:
     	  break;
 
+    	//======================================================================================
     	case Shoot:
     	  break;
     	}
