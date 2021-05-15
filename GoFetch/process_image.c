@@ -9,17 +9,17 @@
 
 #include <process_image.h>
 
-static uint8_t target_not_found = 0, searching = TRUE, aligned = FALSE;
+static uint8_t target_not_found = 0; //searching = TRUE, aligned = FALSE;
 static int target_position = 0; //angular position given in pixels with
 
-#define WIDTH_SLOPE 		5
+#define WIDTH_SLOPE 		8
 #define MIN_WIDTH_PIXELS	30
 #define MIN_HALFWIDTH_PX	15
-#define MIN_OFFSET 			1
+#define MIN_OFFSET 			3
 #define NOISE_LEVEL			3
 #define MEDIAN_OFFSET		NOISE_LEVEL
 #define MAX_PX_VALUE		32
-#define OFFSET				15			//Offset if the number to substract from max_px_value to find the threshhold value
+#define OFFSET				11			//Offset if the number to substract from max_px_value to find the threshhold value
 
 
 #define RED					0
@@ -37,7 +37,7 @@ static int target_position = 0; //angular position given in pixels with
 #define LINE_TO_READ_BEGIN  200
 #define NB_LINES_TO_READ 	2
 
-#define FRAMES_FOR_DETECTION 3
+#define FRAMES_FOR_DETECTION 8
 #define MIN_TOLERANCE_FOR_ALIGNEMENT 5
 
 //=================================================================
@@ -136,7 +136,6 @@ void update_target_detection(uint8_t *buffer){
 }
 
 uint8_t target_detected_camera(void){
-//	return !(target_not_found | 0b11111110);
 	return (target_not_found == 0);
 }
 
@@ -171,8 +170,6 @@ static THD_FUNCTION(CaptureImage, arg) {
 		chBSemSignal(&image_ready_sem);
     }
 
-    chThdSleepMilliseconds(50);
-
 }
 
 static THD_WORKING_AREA(waProcessImage, 1024);
@@ -184,7 +181,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 	uint8_t *img_buff_ptr;
 	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
 
-	bool send_to_computer = true;
+//	bool send_to_computer = true;
 
     while(1){
     	//waits until an image has been captured
@@ -200,14 +197,14 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		//searching will be true as long as a detection was not made during a sufficient amount of frames FRAMES_FOR_DETECTION
 		//It will not go back to true as long as it was "not found" for a consecutive amount of frames FRAMES_FOR_DETECTION
-		searching = !found_lost_target(searching);
+//		searching = !found_lost_target(searching);
 
 		//the target is aligned once the camera is no longer searching & the target is in the center +- MIN_TOLERANCE_FOR_ALIGNEMENT pixels
-		aligned = (!searching && target_position<MIN_TOLERANCE_FOR_ALIGNEMENT && target_position>-MIN_TOLERANCE_FOR_ALIGNEMENT);
+//		aligned = (!searching && target_position<MIN_TOLERANCE_FOR_ALIGNEMENT && target_position>-MIN_TOLERANCE_FOR_ALIGNEMENT);
 
 
 
-		send_to_computer = !send_to_computer;
+//		send_to_computer = !send_to_computer;
 		if(target_not_found) {
 			set_led(LED5,0);
 		} else {
@@ -227,8 +224,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 //			//sends to the computer the image
 //			SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
 //		}
-		//invert the bool
-		chThdSleepMilliseconds(70);
+//		//invert the bool
     }
 }
 
@@ -242,8 +238,9 @@ static THD_FUNCTION(ProcessImage, arg) {
 uint8_t found_lost_target(uint8_t mode){
 
 	//counts the number of times the object was detected
-	static uint8_t detection_counter;
-	if(target_detected_camera() == mode){
+	static uint8_t detection_counter = 0;
+
+	if(mode == target_detected_camera()){
 		detection_counter++;
 	} else {
 		detection_counter = 0;
@@ -261,21 +258,21 @@ uint8_t found_lost_target(uint8_t mode){
 	}
 }
 
-uint8_t get_searching(void){
-	return searching;
-}
+//uint8_t get_searching(void){
+//	return searching;
+//}
 
-uint8_t get_aligned(void){
-	return aligned;
-}
+//uint8_t get_aligned(void){
+//	return aligned;
+//}
 
 int get_angle_to_target(void){
 	return -target_position;
 }
 
 void process_image_start(void){
-	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage+1, NULL);
-	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage+1, NULL);
+	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO+1, ProcessImage, NULL);
+	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO+1, CaptureImage, NULL);
 }
 
 

@@ -231,7 +231,6 @@ void reset_step_count(void){
 //================================================================================
 uint8_t verify_done_moving(uint8_t mode, int speed, uint32_t nbSteps, uint8_t (*f)(uint8_t, int, uint32_t)){
 	static uint8_t changing_mode = TRUE;
-	if(changing_mode) set_led(LED1, 1); else set_led(LED1, 0);
 	if(!get_ongoing_state() && changing_mode){
 		reset_step_count();
 		changing_mode = FALSE;

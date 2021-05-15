@@ -267,9 +267,9 @@ static THD_FUNCTION(programRegulator, arg) {
 
 #ifdef TEST5
 
-		static uint8_t test = 0;
-
-		static uint8_t aligned = 0;
+//		static uint8_t test = 0;
+//
+//		static uint8_t aligned = 0;
 		static uint8_t searching = 1;
 
 //		static uint16_t robot_radius = 140, target_radius = 80;
@@ -281,44 +281,44 @@ static THD_FUNCTION(programRegulator, arg) {
 
 		searching = !found_lost_target(searching);
 
-		    				if(searching){
-		    					set_body_led(1);
-		    				} else {
-		    					set_body_led(0);
-		    				}
-		switch(test){
-		case 0:
-			if(searching){
-				rotate(MODE_INFINITE, SLOWSPEED, 0);
-			} else {
-				halt();
-				test++;
-			}
-		  break;
-		case 1:
-			if(searching){
-				test = 0;
-				rotate(MODE_INFINITE, SLOWSPEED, 0);
-			}
-			else if(!aligned){
-				aligned = P_align(!aligned, -get_angle_to_target(), TOLERANCE_FOR_ALIGNEMENT);
-			}
-			else{
-				halt();
-				test++;
-			}
-		  break;
-		case 2:
-			if(searching){
-				test = 0;
-				rotate(MODE_INFINITE, SLOWSPEED, 0);
-			} else if (!aligned) {
-				test = 1;
-			} else {
-				forwards(MODE_INFINITE, NORMALSPEED, 0);
-			}
-		  break;
+		if(searching){
+			set_body_led(1);
+		} else {
+			set_body_led(0);
 		}
+//		switch(test){
+//		case 0:
+//			if(searching){
+//				rotate(MODE_INFINITE, SLOWSPEED, 0);
+//			} else {
+//				halt();
+//				test++;
+//			}
+//		  break;
+//		case 1:
+//			if(searching){
+//				test = 0;
+//				rotate(MODE_INFINITE, SLOWSPEED, 0);
+//			}
+//			else if(!aligned){
+//				aligned = P_align(!aligned, -get_angle_to_target(), TOLERANCE_FOR_ALIGNEMENT);
+//			}
+//			else{
+//				halt();
+//				test++;
+//			}
+//		  break;
+//		case 2:
+//			if(searching){
+//				test = 0;
+//				rotate(MODE_INFINITE, SLOWSPEED, 0);
+//			} else if (!aligned) {
+//				test = 1;
+//			} else {
+//				forwards(MODE_INFINITE, NORMALSPEED, 0);
+//			}
+//		  break;
+//		}
 #endif
 
 
