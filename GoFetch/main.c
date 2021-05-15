@@ -13,8 +13,8 @@
 #include <motors.h>
 #include <camera/po8030.h>
 #include <chprintf.h>
-#include <sensors/VL53L0X/VL53L0X.h>
-//#include <proximity.h>
+//#include <sensors/VL53L0X/VL53L0X.h>
+#include <sensors/proximity.h>
 
 //#include <pi_regulator.h>
 #include <program_regulator.h>
@@ -64,35 +64,16 @@ int main(void)
 	//big_brain_start();
 
 	//inits the proximity sensors
-//	proximity_start();
+	proximity_start();
 
 	//stars the threads for the pi regulator and the processing of the image
 //	pi_regulator_start();
 	process_image_start();
 	program_regulator_start();
 
-	//test
-	//turn_around();
-	//turn(1);
-    /* Infinite loop. */
-	static uint8_t a = 0;
-	//forward(_BACKWARD, SLOW_SPEED);
+
+
     while (1) {
-    	//waits 1 second
-    	/*if (VL53L0X_get_dist_mm()<500){
-    		set_body_led(1);
-    	} else {
-    		set_body_led(0);
-    	}*/
-    	/*if (a==0){
-    		forward(_BACKWARD, SLOW_SPEED);
-    		//left_motor_set_speed(SLOW_SPEED);
-    		//right_motor_set_speed(SLOW_SPEED);
-    		a++;
-    	} else {
-    		motor_stop();
-    		a=0;
-    	}*/
 
         chThdSleepMilliseconds(1000);
     }

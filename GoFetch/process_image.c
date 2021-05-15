@@ -19,7 +19,7 @@ static int target_position = 0; //angular position given in pixels with
 #define NOISE_LEVEL			3
 #define MEDIAN_OFFSET		NOISE_LEVEL
 #define MAX_PX_VALUE		32
-#define OFFSET				14			//Offset if the number to substract from max_px_value to find the threshhold value
+#define OFFSET				12			//Offset if the number to substract from max_px_value to find the threshhold value
 
 
 #define RED					0
@@ -228,6 +228,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 //			SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
 //		}
 		//invert the bool
+		chThdSleepMilliseconds(70);
     }
 }
 

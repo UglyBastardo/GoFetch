@@ -9,10 +9,12 @@
 #include <process_image.h>
 #include <leds.h>
 #include <movements.h>
+#include <sensors/proximity.h>
 
-#define SLOWSPEED 		150
+#define SLOWSPEED 		220
 #define NORMALSPEED 	500
 #define TOLERANCE_FOR_ALIGNEMENT 7
+#define MIN_DISTANCE_TO_TARGET 20
 
 
 //#define TEST3
@@ -24,45 +26,61 @@ static THD_FUNCTION(programRegulator, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
+	static int robot_angle = 0;
+
 	static uint8_t searching = TRUE;
 	static uint8_t aligned   = FALSE;
-	static uint32_t init_pos = 0, final_pos = 0;
-	static Angle delta_angle;
+	static enum process {SearchAndAlign, GoToTarget, AroundTarget, Shoot} process = SearchAndAlign;
 
 
     while(1){
 
 #ifdef PROJECT
 
+    	//searching = !found_lost_target(searching);
+    	searching=0;
 
+    				if(searching){
+    					set_body_led(1);
+    				} else {
+    					set_body_led(0);
+    				}
 
-//    	init_pos = left_motor_get_pos();
-		rotate(MODE_INFINITE, SLOWSPEED, 0);
-		searching = !found_lost_target(searching);
-		if(!searching){
-			aligned = P_align(!searching, get_angle_to_target(), 7);
-		}
+    	switch(process){
+    	case SearchAndAlign:
+    		reset_step_count();
+    		if(searching){
+    			rotate(MODE_INFINITE, SLOWSPEED, 0);
+			}else if (!aligned){
+				aligned = P_align(!searching, get_angle_to_target(), 7);
+			}else{
+				process = GoToTarget;
+				halt();
+				robot_angle += right_motor_get_pos();
+			}
 
-		if(aligned){
-			set_led(LED1,1);
-		} else {
-			set_led(LED1,0);
-		}
+    					if(aligned){
+    						set_led(LED1,1);
+    					} else {
+    						set_led(LED1,0);
+    					}
 
-		if(searching){
-			set_body_led(1);
-		} else {
-			set_body_led(0);
-		}
+    	  break;
 
-//        final_pos = left_motor_get_pos();
-//        delta_angle = final_pos - init_pos;
+    	case GoToTarget:
 
-		//Attention, ici je ne sépare par les modes...
-		if(aligned){
-			forwards(MODE_INFINITE, SLOWSPEED,0);
-		}
+//    		if(get_prox(1)<MIN_DISTANCE_TO_TARGET){
+//    			halt();
+//    			set_front_led(1);
+//    		}
+    	  break;
 
+    	case AroundTarget:
+    	  break;
+
+    	case Shoot:
+    	  break;
+    	}
 
 #endif
 
@@ -156,7 +174,7 @@ static THD_FUNCTION(programRegulator, arg) {
 		}
 #endif
 
-        chThdSleepMilliseconds(30);
+        chThdSleepMilliseconds(70);
     }
 }
 
