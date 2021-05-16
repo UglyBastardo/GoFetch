@@ -12,10 +12,10 @@
 
 enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, ReAlign, Shoot, Victory};
 
-#define MIN_DISTANCE 		  	60 		//mm
-#define MAX_DISTANCE			140		//mm
-#define SMALL_DISTANCE			100 //steps
-#define MAX_DETECTION_DISTANCE 500 //mm
+#define MIN_DISTANCE 		60 		//mm
+#define MAX_DISTANCE		140		//mm
+#define SMALL_DISTANCE		100 //steps
+#define RADIUS_OBJECT		15 //steps
 
 /**
 * @brief   calculate the distance needed for the robot to travel back to the center
@@ -76,10 +76,11 @@ Angle calculate_revolution(int32_t distance_moved_, int16_t angle){
 
 	//developpement Taylor PI - arcos(x)
 	double x = (dist*dist + distance_moved*distance_moved - radius*radius)/(2*distance_moved*dist);
-	double rotation_angle = PI/2 + x + x*x*x/6;
+//	double rotation_angle = PI/2 + x + x*x*x/6;
+	double rotation_angle = PI - acos(x);
 
 	//converts angle to MILIRAD
-	rotation_angle *= MILIRAD_TO_RAD;
+	rotation_angle *= RAD_TO_MILIRAD;
 
 	//converts double to int
 	Angle angle_to_align = ceil(rotation_angle);
@@ -105,7 +106,7 @@ static THD_FUNCTION(BigBrain, arg) {
     //chose the actions to do next
     static enum Process_Mode mode = RotateAndSearch;
 
-    while(mode!=Victory)
+    while(1)
     {
       switch(mode)
       {
@@ -176,7 +177,7 @@ static THD_FUNCTION(BigBrain, arg) {
 				set_p_regulator();
 				mode = Shoot;
 			} else if (finished_moving()){
-				//in case the robot doesn't see the piece because too close
+				//in case the robot doesn't see the object because too close
 				forward_nb_steps(-SMALL_DISTANCE);
 			}
 		  continue;
@@ -187,12 +188,19 @@ static THD_FUNCTION(BigBrain, arg) {
         case Shoot:
         	//check if the P controller has finished -> starts moving
         	if (finished_moving()){
-        		forward_nb_steps(calculate_distance(distance, angle));
-        		set_body_led(1);
-        		mode = DoNothing;
+        		forward_nb_steps(calculate_distance(distance, angle)-RADIUS_OBJECT);
+        		mode = Victory;
         		//faut encore rajouter -> victory (check que le robot a fait le trajet)
         	}
+        	continue;
+
         case Victory:
+        	if (finished_moving()){
+        		//small dance
+        		set_body_led(1);
+        		rotate_angle(8*PI*RAD_TO_MILIRAD);
+        		mode = DoNothing;
+        	}
         	//scream();
           continue;
       }

@@ -127,8 +127,10 @@ void rotate_angle(uint16_t angle_to_complete) {
 
 	currentState = DoNothing_; //au cas où il était en stop
 
-	left_motor_set_speed_step(NORMAL_SPEED, DIST_WHEELS/2*angle_to_complete/MILIRAD_TO_RAD);//magic number
-	right_motor_set_speed_step(-NORMAL_SPEED, -DIST_WHEELS/2*angle_to_complete/MILIRAD_TO_RAD);
+	reset_number_step();
+
+	left_motor_set_speed_step(NORMAL_SPEED, DIST_WHEELS/2*angle_to_complete/RAD_TO_MILIRAD);
+	right_motor_set_speed_step(-NORMAL_SPEED, -DIST_WHEELS/2*angle_to_complete/RAD_TO_MILIRAD);
 
 	currentState = CurrentlyMoving;
 }
@@ -168,7 +170,7 @@ void increase_radius(void){
 void turn_around(void){
 
 	//makes a full turn around the current radius
-	revolve_around(2*MILIRAD_TO_RAD*PI,position_radius);
+	revolve_around(2*RAD_TO_MILIRAD*PI,position_radius);
 
 	currentState = IncreaseRadius;
 }
@@ -183,8 +185,8 @@ void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 		speed_right = ((radius_of_revolution+ DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
 	}
 
-	int32_t left_distance = (radius_of_revolution-DIST_WHEELS/2)*angle_to_revolve/MILIRAD_TO_RAD;
-	int32_t right_distance = (radius_of_revolution+DIST_WHEELS/2)*angle_to_revolve/MILIRAD_TO_RAD;
+	int32_t left_distance = (radius_of_revolution-DIST_WHEELS/2)*angle_to_revolve/RAD_TO_MILIRAD;
+	int32_t right_distance = (radius_of_revolution+DIST_WHEELS/2)*angle_to_revolve/RAD_TO_MILIRAD;
 
 	reset_number_step();
 
@@ -240,7 +242,6 @@ int16_t motor_stop(void){
 		case Forward_:
 			return left_motor_get_pos();
 			break;
-			//faut mettre un default?
 		default:
 			return 0;
 	}

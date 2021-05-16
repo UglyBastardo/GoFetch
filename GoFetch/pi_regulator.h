@@ -9,8 +9,7 @@
 #define _LEFT  -1
 #define _FORWARD 1
 #define _BACKWARD -1
-#define MAXSTEPS 20000
-#define MILIRAD_TO_RAD 1000 //je le mets où?
+#define RAD_TO_MILIRAD 1000 //je le mets où?
 #define MM_TO_STEP 7.75
 #define PI 3.1415926
 #define FULL_TURN 1290

@@ -64,29 +64,7 @@ int main(void)
 	pi_regulator_start();
 	process_image_start();
 
-	//test
-	//turn_around();
-	//turn(1);
-    /* Infinite loop. */
-//	static uint8_t a = 0;
-	//forward(_BACKWARD, SLOW_SPEED);
     while (1) {
-    	//waits 1 second
-    	/*if (VL53L0X_get_dist_mm()<500){
-    		set_body_led(1);
-    	} else {
-    		set_body_led(0);
-    	}*/
-    	/*if (a==0){
-    		forward(_BACKWARD, SLOW_SPEED);
-    		//left_motor_set_speed(SLOW_SPEED);
-    		//right_motor_set_speed(SLOW_SPEED);
-    		a++;
-    	} else {
-    		motor_stop();
-    		a=0;
-    	}*/
-
         chThdSleepMilliseconds(1000);
     }
 }
