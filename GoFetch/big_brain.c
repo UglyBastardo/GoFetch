@@ -6,8 +6,8 @@
 #include <motors.h>
 #include <process_image.h>
 #include <big_brain.h>
-#include <pi_regulator.h>
 #include <leds.h>
+#include <motor_process.h>
 #include <tof_process.h>
 
 enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, ReAlign, Shoot, Victory};

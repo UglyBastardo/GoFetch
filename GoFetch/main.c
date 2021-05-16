@@ -14,9 +14,9 @@
 #include <chprintf.h>
 #include <sensors/VL53L0X/VL53L0X.h>
 
-#include <pi_regulator.h>
 #include <process_image.h>
 #include <big_brain.h>
+#include <motor_process.h>
 #include <tof_process.h>
 
 int main(void)
@@ -37,7 +37,7 @@ int main(void)
 	motors_init();
 
 	//stars the threads for the pi regulator and the processing of the image
-	pi_regulator_start();
+	motor_regulator_start();
 	process_image_start();
 	tof_thread_start();
 

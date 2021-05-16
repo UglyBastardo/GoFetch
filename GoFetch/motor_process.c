@@ -7,12 +7,12 @@
 #include <main.h>
 #include <motors.h>
 #include <leds.h>
-#include <pi_regulator.h>
+#include <motor_process.h>
 #include <process_image.h>
 
 //distance between the wheels
 #define DIST_WHEELS 411 //unity: steps (0.129mm)
-#define INCREASE_RADIUS 2500 //arbitraire
+#define INCREASE_RADIUS 2500
 //parameters for the p controller
 #define KP 2
 #define ROT_ERR_THRESHOLD 2
@@ -62,8 +62,8 @@ void p_regulator(void);
 */
 void motor_halt(void);
 
-static THD_WORKING_AREA(waPiRegulator, 256);
-static THD_FUNCTION(PiRegulator, arg) {
+static THD_WORKING_AREA(waMotorRegulator, 256);
+static THD_FUNCTION(MotorRegulator, arg) {
 
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
@@ -219,8 +219,8 @@ void forward_nb_steps(int32_t steps_to_complete){
 	}
 }
 
-void pi_regulator_start(void){
-	chThdCreateStatic(waPiRegulator, sizeof(waPiRegulator), NORMALPRIO, PiRegulator, NULL);
+void motor_regulator_start(void){
+	chThdCreateStatic(waMotorRegulator, sizeof(waMotorRegulator), NORMALPRIO, MotorRegulator, NULL);
 }
 
 void motor_search_ball(void){

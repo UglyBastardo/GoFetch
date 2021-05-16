@@ -1,8 +1,6 @@
 #ifndef PI_REGULATOR_H
 #define PI_REGULATOR_H
 
-//pas s�r que cette valeur � besoin d'�tre dans le .h
-
 #define NORMAL_SPEED 500
 #define SLOW_SPEED 250
 #define _RIGHT 1
@@ -20,14 +18,14 @@
 * @brief start the motor thread
 *
 */
-void pi_regulator_start(void);
+void motor_regulator_start(void);
 
 /**
 * @brief   Uses the motors to get the robot to rotate a certain angle (clockwise)
 *
 * @param	angle_to_complete		angle in mRad
 */
-void rotate_angle(uint16_t angle_to_complete); //uint16_t?
+void rotate_angle(uint16_t angle_to_complete);
 
 /**
 * @brief   turn around a certain point (anti-clockwise)
