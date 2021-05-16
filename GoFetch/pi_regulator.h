@@ -11,11 +11,11 @@
 #define _BACKWARD -1
 #define MAXSTEPS 20000
 #define MILIRAD_TO_RAD 1000 //je le mets où?
-#define MM_TO_STEP 7.69
+#define MM_TO_STEP 7.75
 #define PI 3.1415926
-#define FULL_TURN 1213
+#define FULL_TURN 1290
 #define QUARTER_TURN FULL_TURN/4
-
+#define STEPS_TO_RAD 2*PI/FULL_TURN
 //start the PI regulator thread
 void pi_regulator_start(void);
 
@@ -81,7 +81,7 @@ void motor_search_ball(void);
 * @brief   stops the motor
 *
 */
-void motor_stop(void);
+int16_t motor_stop(void);
 
 /**
 * @brief   get the distance moved by the robot (after the call of the function forward)
@@ -115,5 +115,8 @@ void forward_nb_steps(int32_t steps_to_complete);
 void get_around(Angle angle_to_revolve, uint16_t radius_of_revolution);
 
 void set_p_regulator(void);
+
+//to call only after usage of the P_controller
+double get_angle(void);
 
 #endif /* PI_REGULATOR_H */

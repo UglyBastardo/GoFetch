@@ -42,9 +42,9 @@ void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 //test partie Dayan
 
 //distance entre les roues
-#define DIST_WHEELS 384.6 //unity: steps (0.13mm)
+#define DIST_WHEELS 411 //unity: steps (0.13mm)
 #define NBR_STEP_FULLTURN 1000
-#define INCREASE_RADIUS 1500 //arbitraire
+#define INCREASE_RADIUS 2500 //arbitraire
 #define KP 2
 #define ROT_ERR_THRESHOLD 2
 
@@ -56,7 +56,7 @@ static int16_t speed_right = 200;
 
 //static Process_mode mode = DoNothing;
 //robot position in cylindrical coordinates
-static int16_t position_radius = DIST_WHEELS/2; //unity steps
+static int16_t position_radius = 0; //unity steps
 //static int16_t position_angle = 0; // unity mRad
 
 //pas sûr de ça (mettre en 32?)
@@ -342,17 +342,17 @@ void motor_search_ball(void){
 	}
 }
 
-void motor_stop(void){
+int16_t motor_stop(void){
 	//to calculate the position according to the state it was in
 	enum motor_mode ancientState = currentState;
 	currentState = Stop; // ===============================================================================0
 	switch (ancientState){
 		case Forward:
-			distance = left_motor_get_pos();
+			return left_motor_get_pos();
 			break;
 			//faut mettre un default?
 		default:
-			;
+			return 0;
 	}
 }
 
@@ -447,4 +447,9 @@ void p_regulator(void){
 void motor_halt(void){
 	right_motor_set_speed(0);
 	left_motor_set_speed(0);
+}
+
+double get_angle(void){
+	return right_motor_get_pos();
+
 }
