@@ -62,7 +62,7 @@ int main(void)
 
 	//stars the threads for the pi regulator and the processing of the image
 	pi_regulator_start();
-//	process_image_start();
+	process_image_start();
 
 	//test
 	//turn_around();

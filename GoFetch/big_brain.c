@@ -11,7 +11,7 @@
 #include <leds.h>
 
 //enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, Shoot, Victory};
-static enum Process_Mode mode = RotateAndSearch; //
+static enum Process_Mode mode = DoNothing; //
 
 #define STEPS_PER_ANGULAR_UNIT 	1
 #define MIN_DISTANCE 		  	40 		//mm
@@ -45,6 +45,7 @@ int32_t calculate_distance(void){
 //	double alpha = 0; //get_angle()
 //	int32_t dist = sqrt(distance_moved*distance_moved + radius*radius - 2*distance_moved*radius*cos(PI/2+alpha));
 	uint32_t dist = sqrt(distance_moved*distance_moved + radius*radius);
+	dist += VL53L0X_get_dist_mm()*MM_TO_STEP;
 
 //	if(dist<150){
 //		set_front_led(1);
@@ -59,18 +60,19 @@ uint8_t target_detected(void){
 //	return 0;
 
 //	return line_detected();
-	static uint8_t check=0; //pas sûr du nom
-	if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE && check<=CHECK_TRESHOLD){
-		check++;
-		return 0; //Object detected
-	} else if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE){
-//		set_front_led(1);
+//	static uint8_t check=0; //pas sûr du nom
+//	if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE && check<=CHECK_TRESHOLD){
 //		check++;
-		return 1;
-	} else {
-		check = 0;
-		return 0;
-	}
+//		return 0; //Object detected
+//	} else if (VL53L0X_get_dist_mm()<MAX_DETECTION_DISTANCE){
+////		set_front_led(1);
+////		check++;
+//		return 1;
+//	} else {
+//		check = 0;
+//		return 0;
+//	}
+	return target_found();
 }
 
 //==================================================================================
@@ -202,6 +204,14 @@ static THD_FUNCTION(BigBrain, arg) {
       {
       //===============================================================================================================
         case DoNothing:
+        	if(target_found()){
+        		set_body_led(1);
+        		set_p_regulator();
+        	} else {
+        		set_body_led(0);
+        		set_front_led(0);
+        		motor_stop();
+        	}
           continue;
 
       //===============================================================================================================
@@ -223,11 +233,15 @@ static THD_FUNCTION(BigBrain, arg) {
         case Align:
 
         	//First, the robot detects and aligns itself. If The target is no longer detected, it searches again.
-        	if(target_detected()==1){
+        	if(target_detected()==1 && finished_moving()){
+
         		//rotate_angle(get_angle_to_target(), NORMAL_SPEED );
 //        		rotate_angle(get_angle_to_target());
         		//mode = FinishedAligning;
         		mode = Forward;
+        	} else if (target_detected()==1) {
+        		set_p_regulator();
+//        		mode = RotateAndSearch;
         	} else {
         		mode = RotateAndSearch;
         	}

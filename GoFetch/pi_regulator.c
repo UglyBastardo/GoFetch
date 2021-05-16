@@ -6,6 +6,7 @@
 
 #include <main.h>
 #include <motors.h>
+#include <leds.h>
 #include <pi_regulator.h>
 #include <process_image.h>
 #include <big_brain.h>
@@ -44,6 +45,8 @@ void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 #define DIST_WHEELS 384.6 //unity: steps (0.13mm)
 #define NBR_STEP_FULLTURN 1000
 #define INCREASE_RADIUS 1500 //arbitraire
+#define KP 2
+#define ROT_ERR_THRESHOLD 2
 
 /*
 //besoin de 16 bits?
@@ -59,7 +62,7 @@ static int16_t position_radius = DIST_WHEELS/2; //unity steps
 //pas sûr de ça (mettre en 32?)
 static int16_t distance = 0;
 
-enum motor_mode{Stop, TurnAround, IncreaseRadius, DoNothing_, CurrentlyMoving, FinishedMoving, Forward_, GetAround};
+enum motor_mode{Stop, TurnAround, IncreaseRadius, DoNothing_, CurrentlyMoving, FinishedMoving, Forward_, GetAround, PRegulator};
 static enum motor_mode currentState = DoNothing_;
 
 
@@ -83,6 +86,9 @@ void increase_radius(void);
 */
 void turn_around(void);
 
+void p_regulator(void);
+
+void motor_halt(void);
 /*
 void set_mode(Process_mode mode_){
 	mode = mode_;
@@ -145,6 +151,12 @@ static THD_FUNCTION(PiRegulator, arg) {
 				if (get_ongoing_state()!=1){
 					get_around(0,0);
 				}
+				continue;
+
+			case PRegulator:
+				p_regulator();
+				continue;
+
 			default:
 				;
         }
@@ -327,6 +339,8 @@ void motor_stop(void){
 			distance = left_motor_get_pos();
 			break;
 			//faut mettre un default?
+		default:
+			;
 	}
 }
 
@@ -394,4 +408,31 @@ void get_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 		default:
 			;
 	}
+}
+
+void set_p_regulator(void){
+	if (currentState!=PRegulator && currentState != FinishedMoving){
+		reset_number_step();
+		currentState = PRegulator;
+	}
+}
+
+void p_regulator(void){
+	int err = get_angle_to_target();
+
+	if (err<ROT_ERR_THRESHOLD && err>-ROT_ERR_THRESHOLD){
+		motor_halt();
+		currentState = FinishedMoving;
+		set_front_led(1);
+		return;
+	}
+
+	right_motor_set_speed(err*KP);
+	left_motor_set_speed(-err*KP);
+}
+
+//utile?
+void motor_halt(void){
+	right_motor_set_speed(0);
+	left_motor_set_speed(0);
 }

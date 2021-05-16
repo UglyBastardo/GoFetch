@@ -114,4 +114,6 @@ void forward_nb_steps(uint32_t steps_to_complete);
 
 void get_around(Angle angle_to_revolve, uint16_t radius_of_revolution);
 
+void set_p_regulator(void);
+
 #endif /* PI_REGULATOR_H */
