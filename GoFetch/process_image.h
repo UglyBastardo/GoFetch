@@ -4,8 +4,6 @@
 int get_angle_to_target(void);
 void process_image_start(void);
 
-//mettre int.
-void found_lost_target(void);
 
 //return 1 if found, else 0
 uint8_t target_found(void);

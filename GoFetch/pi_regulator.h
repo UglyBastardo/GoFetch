@@ -16,47 +16,22 @@
 #define FULL_TURN 1290
 #define QUARTER_TURN FULL_TURN/4
 #define STEPS_TO_RAD 2*PI/FULL_TURN
-//start the PI regulator thread
+
+/**
+* @brief start the motor thread
+*
+*/
 void pi_regulator_start(void);
 
-//pas forcémeent besoin de le mettre là?
-
-//peut-etre creer son propre enum
-
 /**
-* @brief
+* @brief   Uses the motors to get the robot to rotate a certain angle (clockwise)
 *
-* @param
+* @param	angle_to_complete		angle in mRad
 */
-//void set_mode(Process_mode mode_);
-
-/**
-* @brief   Uses the motors to get the robot to rotate a certain anmount of steps (using the new functions in motors.h (demande moi au cas oÃ¹)
-*
-* @param
-*/
-
-//void rotate_angle(Angle angle_to_complete, Angular_speed angular_speed);
 void rotate_angle(uint16_t angle_to_complete); //uint16_t?
-//turn in the given direction
 
 /**
-* @brief   function simply makes the robot turn without counting steps (maybe not useful)
-*
-* @param
-*/
-void turn(Direction dir); //pas forcï¿½ment besoin de mettre dans le .h peut-ï¿½tre
-
-
-/**
-* @brief   Most complicated function: Makes the robot revolve all the while making sure it is trackable: I'm sure we could use your own function from before Dayan
-*
-* @param
-*/
-
-
-/**
-* @brief   turn around a certain point
+* @brief   turn around a certain point (anti-clockwise)
 *
 * @param 	angle_to_revolve		rotation angle in mRad
 * 			radisus_of_revolution 	radius of the circle
@@ -66,7 +41,7 @@ void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution);
 /**
 * @brief   robot moves at a certain speed (forward or backward)
 *
-* @param 	dir		direction (FORWARD: 1, BACKWARD: -1)
+* @param 	dir		direction (_FORWARD: 1, _BACKWARD: -1)
 * 			speed 	speed of the robot (in step/s)
 */
 void forward(Direction dir, uint16_t speed);
@@ -78,17 +53,11 @@ void forward(Direction dir, uint16_t speed);
 void motor_search_ball(void);
 
 /**
-* @brief   stops the motor
+* @brief   stops the motor and return a value depending on the previous state
 *
+* @return 	if the mode was forward: return the distance traveled (in steps)
 */
 int16_t motor_stop(void);
-
-/**
-* @brief   get the distance moved by the robot (after the call of the function forward)
-*
-* @return distance (in step)
-*/
-int16_t get_distance(void);
 
 /**
 * @brief   get the radius of the current searching circle
@@ -97,26 +66,40 @@ int16_t get_distance(void);
 */
 int16_t get_radius(void);
 
-
-//one-time read: 1:done moving 0:still moving
-//vraiment si utile le finishedmoving?
-
 /**
 * @brief   know if the motor has finished moving (one time read)
 *
 * @return 1 if the robot has finished moving
 * 		  0 if the robot is still moving, or the result has already been read
-*
 */
 uint8_t finished_moving(void);
 
+/**
+* @brief   move forwards a certain number of steps
+*
+* @param steps_to_complete		distance to (parcourir en anglais? ^^') (in step)
+*/
 void forward_nb_steps(int32_t steps_to_complete);
 
+/**
+* @brief   turn around a certain point (facing the point at the beginning and at the end)
+*
+* @param angle_to_revolve		angle //parcouru (in mRad)
+* 		 radius_of_revolution	distance between the robot and the point (in step)
+*/
 void get_around(Angle angle_to_revolve, uint16_t radius_of_revolution);
 
+/**
+* @brief   start a P_regulator to align the robot and the objet (communicate with process_image.h)
+*
+*/
 void set_p_regulator(void);
 
-//to call only after usage of the P_controller
-double get_angle(void);
+/**
+* @brief   get the angle traveled to align the robot and the object
+*
+* @return the angle (+: clockwise)(in step)
+*/
+int16_t get_angle(void);
 
 #endif /* PI_REGULATOR_H */

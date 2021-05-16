@@ -9,7 +9,6 @@
 
 #include <process_image.h>
 
-static uint8_t target_not_found = 0; //searching = TRUE, aligned = FALSE;
 static int target_position = 0; //angular position given in pixels with
 
 //mode 0: target found, mode 1: target not found
@@ -43,6 +42,13 @@ static uint8_t mode = 1;
 #define FRAMES_FOR_DETECTION 4
 #define MIN_TOLERANCE_FOR_ALIGNEMENT 5
 
+
+/**
+* @brief   update if the object has been seen /////
+*
+*/
+void found_lost_target(uint8_t target_not_found);
+
 //=================================================================
 /*
  * internal Functions
@@ -70,8 +76,9 @@ void update_target_detection(uint8_t *buffer){
 
 	uint16_t i = 0, begin = 0, end = 0;
 	uint8_t stop = 0, wrong_target = 0;
-	target_not_found = 0;
 	uint8_t mean = 0; // attention si WIDTH grand --> 16_t
+	static uint8_t target_not_found = 0; //searching = TRUE, aligned = FALSE;
+	target_not_found = 0;
 //	uint32_t mean = 0;
 //
 //
@@ -163,7 +170,7 @@ void update_target_detection(uint8_t *buffer){
 		}
 	}while(wrong_target);
 
-	found_lost_target();
+	found_lost_target(target_not_found);
 
 	if(target_not_found){
 		begin = 0;
@@ -244,21 +251,21 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 
 //		send_to_computer = !send_to_computer;
-		if(target_not_found) {
-			set_led(LED5,0);
-		} else {
-			set_led(LED5,1);
-		}
-
-
-		if(target_position>0){
-			set_led(LED3, 1);
-			set_led(LED7, 0);
-		} else {
-			set_led(LED3, 0);
-			set_led(LED7, 1);
-		}
+//		if(target_not_found) {
+//			set_led(LED5,0);
+//		} else {
+//			set_led(LED5,1);
+//		}
 //
+//
+//		if(target_position>0){
+//			set_led(LED3, 1);
+//			set_led(LED7, 0);
+//		} else {
+//			set_led(LED3, 0);
+//			set_led(LED7, 1);
+//		}
+////
 //		if(send_to_computer){
 //			//sends to the computer the image
 //			SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
@@ -275,15 +282,13 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 
 
-void found_lost_target(void){
+void found_lost_target(uint8_t target_not_found){
 
 	//counts the number of times the object was detected
 	static uint8_t detection_counter = 0;
 
-	//define 1 et 0?
-//	//mode 0: target found, mode 1: target not found
-//	static uint8_t mode = 1;
 
+	//mode 0: target found, mode 1: target not found
 
 	if(mode != target_not_found){
 		detection_counter++;
@@ -311,14 +316,6 @@ uint8_t target_found(void){
 	return (mode==FALSE);
 //	return 0;
 }
-
-//uint8_t get_searching(void){
-//	return searching;
-//}
-
-//uint8_t get_aligned(void){
-//	return aligned;
-//}
 
 int get_angle_to_target(void){
 	return -target_position;
