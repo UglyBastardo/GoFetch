@@ -352,7 +352,7 @@ static THD_FUNCTION(programRegulator, arg) {
 				changing_mode = TRUE; //this line of code is to avoid need of semaphore in the motors library
 			}
 					set_front_led(1);
-			if(revolve(MODE_FINITE, NORMALSPEED, radius, CLOCK, 60*radius)){
+			if(revolve(MODE_FINITE, NORMALSPEED, 700, CLOCK, 3.1416*700)){
 				test = 6;
 				changing_mode = TRUE;
 			}
