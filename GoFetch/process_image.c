@@ -11,14 +11,14 @@
 
 #define WIDTH_SLOPE 		10
 #define MIN_WIDTH_PIXELS	30
-#define MIN_HALFWIDTH_PX	15
+//#define MIN_HALFWIDTH_PX	15
 #define MIN_OFFSET 			2
-#define NOISE_LEVEL			6
-#define MEDIAN_OFFSET		NOISE_LEVEL
-#define MAX_PX_VALUE		32
+//#define NOISE_LEVEL			6
+//#define MEDIAN_OFFSET		NOISE_LEVEL
+//#define MAX_PX_VALUE		32
 #define THRESHOLD			20
-#define OFFSET				14			//Offset if the number to substract from max_px_value to find the threshhold value
-#define PXTOCM				2000
+//#define OFFSET				14			//Offset if the number to substract from max_px_value to find the threshhold value
+#define PXTOCM				2000 //Defined but never calibrated
 
 #define RED					0
 #define GREEN 				1
@@ -220,7 +220,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 		}
 
 		//update aligned
-		aligned = (!searching && target_position<TOLERANCE_FOR_ALIGNEMENT && target_position>-TOLERANCE_FOR_ALIGNEMENT);
+		aligned = (!searching && target_position<TOLERANCE_FOR_ALIGNEMENT_CAMERA && target_position>-TOLERANCE_FOR_ALIGNEMENT_CAMERA);
 
 		if(aligned){
 			set_led(LED1, 1);

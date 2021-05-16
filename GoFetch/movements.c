@@ -67,7 +67,7 @@ uint8_t translational_movement(int side, int delta_radius, int execution_speed){
 		mode = Rotate1;
 		break;
 	case Rotate1:
-		if(verify_done_moving(MODE_FINITE, -side*execution_speed, PIover2Steps, rotate)){
+		if(verify_done_moving(MODE_FINITE, side*execution_speed, PIover2Steps*3, rotate)){
 			mode = Forwards;
 //			new_pos_ptr = delta_pos(ROTATE, left_motor_get_pos(), right_motor_get_pos(), 0);
 //			temp_pos[X] = 0;
@@ -88,7 +88,7 @@ uint8_t translational_movement(int side, int delta_radius, int execution_speed){
 		break;
 
 	case Rotate2:
-		if(verify_done_moving(MODE_FINITE, side*execution_speed, PIover2Steps, rotate)){
+		if(verify_done_moving(MODE_FINITE, -side*execution_speed, PIover2Steps*3, rotate)){
 			done = TRUE;
 //			new_pos = delta_pos(ROTATE, left_motor_get_pos(), right_motor_get_pos(), 0);
 //			temp_pos = calculate_position(old_pos[0], old_pos[1], old_pos[2], new_pos[0], new_pos[1], new_pos[2])
@@ -106,8 +106,8 @@ uint8_t translational_movement(int side, int delta_radius, int execution_speed){
 uint8_t go_to_pos(double xinit, double yinit, double angle_init, double xfinal, double yfinal, double angle_final, int execution_speed){
 	double dx = xfinal-xinit;
 	double dy = yfinal-yinit;
-	static uint8_t done = FALSE;
-	static int temp[3];
+	uint8_t done = FALSE;
+	int temp[3];
 
 	double angle_to_cover = atan2(dy, dx)-angle_init;  //angle needed to turn to be looking at destination
 	double distance_to_cover = sqrt(dx*dx +dy*dy);	   //distance to destination

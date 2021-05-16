@@ -1,7 +1,8 @@
 #ifndef PROCESS_IMAGE_H
 #define PROCESS_IMAGE_H
 
-#define TOLERANCE_FOR_ALIGNEMENT 2
+#define TOLERANCE_FOR_ALIGNEMENT_CAMERA 2
+#define TOLERANCE_FOR_ALIGNEMENT_ROBOT 	2
 
 uint8_t get_searching(void);
 uint8_t get_aligned(void);
