@@ -105,14 +105,20 @@ void update_target_detection(uint8_t *buffer){
 		    while(stop == 0 && i < IMAGE_BUFFER_SIZE)
 		    {
 //		    	if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i-WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
-				if(buffer[i] > THRESHOLD-MIN_OFFSET)
+				if(buffer[i] < THRESHOLD-MIN_OFFSET)
 		    	{
 		            end = i;
 		            stop = 1;
 		        }
 		        i++;
 		    }
+
 		    //if an end was not found
+		    if(begin && !end){
+		    	end = i;
+		    }
+
+
 //		    if (i > IMAGE_BUFFER_SIZE || !end)
 //		    {
 //		        target_not_found = 1;
