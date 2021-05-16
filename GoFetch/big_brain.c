@@ -3,7 +3,6 @@
 #include <math.h>
 
 #include <main.h>
-//#include <sensors/VL53L0X/VL53L0X.h>
 #include <motors.h>
 #include <process_image.h>
 #include <big_brain.h>
@@ -15,8 +14,8 @@ enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, ReAlign,
 
 #define MIN_DISTANCE 		60 		//mm
 #define MAX_DISTANCE		140		//mm
-#define SMALL_DISTANCE		100 //steps
-#define RADIUS_OBJECT		15 //steps
+#define SMALL_DISTANCE		100 	//steps
+#define RADIUS_OBJECT		15 		//steps
 
 /**
 * @brief   calculate the distance needed for the robot to travel back to the center
@@ -26,7 +25,7 @@ enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, ReAlign,
 *
 * @return distance (in step)
 */
-uint32_t calculate_distance(int32_t distance_moved_, int16_t angle);
+uint32_t calculate_distance(int16_t distance_moved_, int16_t angle);
 
 /**
 * @brief   calculate the angle needed for the robot get behind the object and facing the center
@@ -36,15 +35,14 @@ uint32_t calculate_distance(int32_t distance_moved_, int16_t angle);
 *
 * @return angle (in mRad)
 */
-Angle calculate_revolution(int32_t distance_moved_, int16_t angle);
+Angle calculate_revolution(int16_t distance_moved_, int16_t angle);
 
 
 
-uint32_t calculate_distance(int32_t distance_moved_, int16_t angle){
+uint32_t calculate_distance(int16_t distance_moved_, int16_t angle){
 
-	//même code & calcul que dans angle, moyen d'optimiser?
 	//distance including the distance between the object and the robot
-	int32_t distance_moved = distance_moved_+get_tof_distance()*MM_TO_STEP;
+	int16_t distance_moved = distance_moved_+get_tof_distance()*MM_TO_STEP;
 	int16_t radius = get_radius();
 	double alpha = angle * STEPS_TO_RAD;
 
@@ -58,14 +56,10 @@ uint32_t calculate_distance(int32_t distance_moved_, int16_t angle){
 	return dist;
 }
 
-Angle calculate_revolution(int32_t distance_moved_, int16_t angle){
-
-//	double distance_moved = (double)distance_moved_;
-//	distance_moved += (double)(VL53L0X_get_dist_mm()*MM_TO_STEP);
-//	double radius = (double)get_radius();
+Angle calculate_revolution(int16_t distance_moved_, int16_t angle){
 
 	//distance including the distance between the object and the robot
-	int32_t distance_moved = distance_moved_ + get_tof_distance()*MM_TO_STEP;
+	int16_t distance_moved = distance_moved_ + get_tof_distance()*MM_TO_STEP;
 	int16_t radius = get_radius();
 
 	double alpha = (double)angle;
@@ -90,10 +84,6 @@ Angle calculate_revolution(int32_t distance_moved_, int16_t angle){
 }
 
 
-//pouquoi t'as déclaré ça?
-//static BSEMAPHORE_DECL(BigBrain_sem, TRUE);
-
-
 //main thread
 static THD_WORKING_AREA(waBigBrain, 1024);
 static THD_FUNCTION(BigBrain, arg) {
@@ -102,10 +92,10 @@ static THD_FUNCTION(BigBrain, arg) {
     (void)arg;
 
     static int16_t angle = 0;
-    static int32_t distance = 0;
+    static int16_t distance = 0;
 
     //chose the actions to do next
-    static enum Process_Mode mode = DoNothing;
+    static enum Process_Mode mode = RotateAndSearch;
 
     while(1)
     {
@@ -119,7 +109,7 @@ static THD_FUNCTION(BigBrain, arg) {
         case RotateAndSearch:
         	motor_search_ball();
         	set_front_led(1);
-        	if(target_found()==1){
+        	if(target_found()){
         		motor_stop();
         		set_front_led(0);
         		mode = Align;
@@ -130,7 +120,7 @@ static THD_FUNCTION(BigBrain, arg) {
         case Align:
 
         	// is true once the p_regulator has finished
-        	if(target_found()==1 && finished_moving()){
+        	if(target_found() && finished_moving()){
         		//gets angle in steps from the P-controller
         		angle = get_angle();
         		mode = Forward;

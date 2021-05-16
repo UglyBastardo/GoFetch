@@ -76,20 +76,20 @@ uint8_t finished_moving(void);
 /**
 * @brief   move forwards a certain number of steps
 *
-* @param steps_to_complete		distance to (parcourir en anglais? ^^') (in step)
+* @param steps_to_complete		distance to travel (in step)
 */
 void forward_nb_steps(int32_t steps_to_complete);
 
 /**
 * @brief   turn around a certain point (facing the point at the beginning and at the end)
 *
-* @param angle_to_revolve		angle //parcouru (in mRad)
+* @param angle_to_revolve		angle traveled (in mRad)
 * 		 radius_of_revolution	distance between the robot and the point (in step)
 */
 void get_around(Angle angle_to_revolve, uint16_t radius_of_revolution);
 
 /**
-* @brief   start a P_regulator to align the robot and the objet (communicate with process_image.h)
+* @brief   start a P_regulator to align the robot and the object (communicate with process_image.h)
 *
 */
 void set_p_regulator(void);

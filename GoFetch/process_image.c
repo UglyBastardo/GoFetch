@@ -18,15 +18,8 @@ static uint8_t mode = 1;
 #define MIN_WIDTH_PIXELS	30
 #define MIN_HALFWIDTH_PX	15
 #define MIN_OFFSET 			3
-#define NOISE_LEVEL			3
-#define MEDIAN_OFFSET		NOISE_LEVEL
 #define MAX_PX_VALUE		32
 #define OFFSET				11			//Offset if the number to substract from max_px_value to find the threshhold value
-
-
-#define RED					0
-#define GREEN 				1
-#define BLUE 				2
 
 #define BRIGHTNESS_DEFAULT	0
 #define CONTRAST_DEFAULT	64
@@ -43,17 +36,20 @@ static uint8_t mode = 1;
 #define MIN_TOLERANCE_FOR_ALIGNEMENT 5
 
 
-/**
-* @brief   update if the object has been seen /////
-*
-*/
-void found_lost_target(uint8_t target_not_found);
+// some functions have been taken from TP4 and modified for the purpose of our project,
+// so the names of the variables and functions may be pretty close
 
 //=================================================================
 /*
  * internal Functions
  */
 //=================================================================
+
+/**
+* @brief   update if the object has been seen /////
+*
+*/
+void found_lost_target(uint8_t target_not_found);
 
 void calibrate_camera(uint8_t brightness, uint8_t contrast, uint8_t awb, uint8_t ae, uint8_t r_gain, uint8_t g_gain, uint8_t b_gain, uint16_t e_integral, uint8_t e_fractional){
 	po8030_set_brightness(brightness);
@@ -71,104 +67,86 @@ void extract_data(uint8_t* data, uint16_t size,	uint8_t *pc){
 	}
 }
 
+
 void update_target_detection(uint8_t *buffer){
 
 
 	uint16_t i = 0, begin = 0, end = 0;
-	uint8_t stop = 0, wrong_target = 0;
+	uint8_t stop = 0;
 	uint8_t mean = 0; // attention si WIDTH grand --> 16_t
 	static uint8_t target_not_found = 0; //searching = TRUE, aligned = FALSE;
 	target_not_found = 0;
-//	uint32_t mean = 0;
-//
-//
-//	//performs an average
-//	for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
-//		mean += buffer[i];
-//	}
-//	mean /= IMAGE_BUFFER_SIZE;
 
-	do{
+	//search for a begin
+
+	//is the object cut by the camera on the left side?
+
+	for(uint8_t j = 0; j < WIDTH_SLOPE; j++){
+		mean+=buffer[j];
+	}
+
+
+	if (mean>(MAX_PX_VALUE-OFFSET-MIN_OFFSET)*WIDTH_SLOPE){
+		//the object is on the left side
+		stop = 1;
+		begin = 1;
+		i=1;
+	}
+
+	while(stop == 0 && i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))
+	{
+		//the slope must at least be WIDTH_SLOPE wide and is compared
+		//to the mean of the image
+		if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i+WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
+		{
+			begin = i;
+			stop = 1;
+		}
+		i++;
+	}
+	//if a begin was found, search for an end
+	if (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE) && begin)
+	{
+		stop = 0;
+
+		while(stop == 0 && i < IMAGE_BUFFER_SIZE-WIDTH_SLOPE)
+		{
+			if(buffer[i+WIDTH_SLOPE] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i] > MAX_PX_VALUE-OFFSET)
+			{
+				end = i;
+				stop = 1;
+			}
+			i++;
+		}
+
+		//is the object cut on the right side?
+
 		mean = 0;
-		wrong_target = 0;
-		//search for a begin
 
-		//is the object cut by the camera on the left side?
-
-		for(uint8_t j = 0; j < WIDTH_SLOPE; j++){
+		for(uint16_t j = (IMAGE_BUFFER_SIZE - WIDTH_SLOPE - 1); j < IMAGE_BUFFER_SIZE - 1; j++){
 			mean+=buffer[j];
 		}
 
 
-		if (mean>(MAX_PX_VALUE-OFFSET-MIN_OFFSET)*WIDTH_SLOPE){
+		if (mean>(MAX_PX_VALUE-OFFSET)*WIDTH_SLOPE && !end){
 			//the object is on the left side
-			stop = 1;
-			begin = 1;
-			i=1;
+			end = IMAGE_BUFFER_SIZE - 1;
 		}
 
-		while(stop == 0 && i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))
+		if (!end)
 		{
-			//the slope must at least be WIDTH_SLOPE wide and is compared
-		    //to the mean of the image
-			if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i+WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
-		    {
-		        begin = i;
-		        stop = 1;
-		    }
-		    i++;
-		}
-		//if a begin was found, search for an end
-		if (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE) && begin)
-		{
-		    stop = 0;
-
-		    while(stop == 0 && i < IMAGE_BUFFER_SIZE-WIDTH_SLOPE)
-		    {
-		    	if(buffer[i+WIDTH_SLOPE] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i] > MAX_PX_VALUE-OFFSET)
-		        {
-		            end = i;
-		            stop = 1;
-		        }
-		        i++;
-		    }
-
-		    //is the object cut on the right side?
-
-		    mean = 0;
-
-		    for(uint16_t j = (IMAGE_BUFFER_SIZE - WIDTH_SLOPE - 1); j < IMAGE_BUFFER_SIZE - 1; j++){
-				mean+=buffer[j];
-			}
-
-
-			if (mean>(MAX_PX_VALUE-OFFSET)*WIDTH_SLOPE && !end){
-				//the object is on the left side
-				end = IMAGE_BUFFER_SIZE - 1;
-			}
-
-		    //if an end was not found
-//		    if (i > IMAGE_BUFFER_SIZE || !end)
-			if (!end)
-		    {
-		        target_not_found = 1;
-		    }
-		}
-		else//if no begin was found
-		{
-		    target_not_found = 1;
-		}
-
-		//if a line too small has been detected, continues the search
-		if(!target_not_found && (end-begin) < MIN_WIDTH_PIXELS){
-//			i = end; //un peu bizzare?
-//			begin = 0;
-//			end = 0;
-//			stop = 0;
-//			wrong_target = 1;
 			target_not_found = 1;
 		}
-	}while(wrong_target);
+	}
+	else//if no begin was found
+	{
+		target_not_found = 1;
+	}
+
+	//if a line too small has been detected, continues the search
+	if(!target_not_found && (end-begin) < MIN_WIDTH_PIXELS){
+		target_not_found = 1;
+	}
 
 	found_lost_target(target_not_found);
 
@@ -181,9 +159,27 @@ void update_target_detection(uint8_t *buffer){
 
 }
 
-//uint8_t target_detected_camera(void){
-//	return (target_not_found == 0);
-//}
+void found_lost_target(uint8_t target_not_found){
+
+	//counts the number of times the object was detected
+	static uint8_t detection_counter = 0;
+
+
+	//mode 0: target found, mode 1: target not found
+	if(mode != target_not_found){
+		detection_counter++;
+	} else {
+		detection_counter = 0;
+	}
+
+	//go true if the number of detections was sufficient for the object to be detected
+	//also stay true when the object has not been proven to be absent
+	if(detection_counter>FRAMES_FOR_DETECTION){
+		//inverse mode
+		detection_counter = 0;
+		mode = (mode==FALSE);
+	}
+}
 
 //=================================================================
 /*
@@ -240,37 +236,6 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		//search for a target in the image and gets its position in pixels
 		update_target_detection(image);
-
-		//searching will be true as long as a detection was not made during a sufficient amount of frames FRAMES_FOR_DETECTION
-		//It will not go back to true as long as it was "not found" for a consecutive amount of frames FRAMES_FOR_DETECTION
-//		searching = !found_lost_target(searching);
-
-		//the target is aligned once the camera is no longer searching & the target is in the center +- MIN_TOLERANCE_FOR_ALIGNEMENT pixels
-//		aligned = (!searching && target_position<MIN_TOLERANCE_FOR_ALIGNEMENT && target_position>-MIN_TOLERANCE_FOR_ALIGNEMENT);
-
-
-
-//		send_to_computer = !send_to_computer;
-//		if(target_not_found) {
-//			set_led(LED5,0);
-//		} else {
-//			set_led(LED5,1);
-//		}
-//
-//
-//		if(target_position>0){
-//			set_led(LED3, 1);
-//			set_led(LED7, 0);
-//		} else {
-//			set_led(LED3, 0);
-//			set_led(LED7, 1);
-//		}
-////
-//		if(send_to_computer){
-//			//sends to the computer the image
-//			SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
-//		}
-//		//invert the bool
     }
 }
 
@@ -280,36 +245,6 @@ static THD_FUNCTION(ProcessImage, arg) {
  */
 //=================================================================
 
-
-
-void found_lost_target(uint8_t target_not_found){
-
-	//counts the number of times the object was detected
-	static uint8_t detection_counter = 0;
-
-
-	//mode 0: target found, mode 1: target not found
-
-	if(mode != target_not_found){
-		detection_counter++;
-	} else {
-		detection_counter = 0;
-	}
-
-	//returns true if the number of detections was sufficient for the object to be detected
-	//Also returns true when the object has not been proven to be absent
-	if(detection_counter>FRAMES_FOR_DETECTION){
-		detection_counter = 0;
-		mode = (mode==FALSE);
-		//returns true if the mode is find and false if the mode is not
-//		return (TRUE==mode);
-	}
-//	else {
-//		//returns true if the mode is find and false otherwise
-////		return (FALSE==mode);
-//		mode = (TRUE==mode);
-//	}
-}
 
 
 uint8_t target_found(void){
