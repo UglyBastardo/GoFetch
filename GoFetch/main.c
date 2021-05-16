@@ -17,6 +17,7 @@
 #include <pi_regulator.h>
 #include <process_image.h>
 #include <big_brain.h>
+#include <tof_process.h>
 
 void SendUint8ToComputer(uint8_t* data, uint16_t size) 
 {
@@ -57,12 +58,14 @@ int main(void)
 	VL53L0X_start();
 	//inits the motors
 	motors_init();
-	//inits the core thread
-	big_brain_start();
 
 	//stars the threads for the pi regulator and the processing of the image
 	pi_regulator_start();
 	process_image_start();
+	tof_thread_start();
+
+	//inits the core thread
+	big_brain_start();
 
     while (1) {
         chThdSleepMilliseconds(1000);

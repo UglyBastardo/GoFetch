@@ -12,6 +12,7 @@ CSRC += ./main.c \
 		./pi_regulator.c \
 		./process_image.c \
 		./big_brain.c \
+		./tof_process.c \
 
 #Header folders to include
 INCDIR += 

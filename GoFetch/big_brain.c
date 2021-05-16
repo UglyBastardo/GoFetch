@@ -3,12 +3,13 @@
 #include <math.h>
 
 #include <main.h>
-#include <sensors/VL53L0X/VL53L0X.h>
+//#include <sensors/VL53L0X/VL53L0X.h>
 #include <motors.h>
 #include <process_image.h>
 #include <big_brain.h>
 #include <pi_regulator.h>
 #include <leds.h>
+#include <tof_process.h>
 
 enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, ReAlign, Shoot, Victory};
 
@@ -43,7 +44,7 @@ uint32_t calculate_distance(int32_t distance_moved_, int16_t angle){
 
 	//même code & calcul que dans angle, moyen d'optimiser?
 	//distance including the distance between the object and the robot
-	int32_t distance_moved = distance_moved_+VL53L0X_get_dist_mm()*MM_TO_STEP;
+	int32_t distance_moved = distance_moved_+get_tof_distance()*MM_TO_STEP;
 	int16_t radius = get_radius();
 	double alpha = angle * STEPS_TO_RAD;
 
@@ -52,7 +53,7 @@ uint32_t calculate_distance(int32_t distance_moved_, int16_t angle){
 	dist=sqrt(dist);
 
 	//distance between the robot and the object + between the object and the center
-	dist += VL53L0X_get_dist_mm()*MM_TO_STEP;
+	dist += get_tof_distance()*MM_TO_STEP;
 
 	return dist;
 }
@@ -64,7 +65,7 @@ Angle calculate_revolution(int32_t distance_moved_, int16_t angle){
 //	double radius = (double)get_radius();
 
 	//distance including the distance between the object and the robot
-	int32_t distance_moved = distance_moved_ + VL53L0X_get_dist_mm()*MM_TO_STEP;
+	int32_t distance_moved = distance_moved_ + get_tof_distance()*MM_TO_STEP;
 	int16_t radius = get_radius();
 
 	double alpha = (double)angle;
@@ -104,7 +105,7 @@ static THD_FUNCTION(BigBrain, arg) {
     static int32_t distance = 0;
 
     //chose the actions to do next
-    static enum Process_Mode mode = RotateAndSearch;
+    static enum Process_Mode mode = DoNothing;
 
     while(1)
     {
@@ -146,9 +147,9 @@ static THD_FUNCTION(BigBrain, arg) {
 		case Forward:
 
 			//use the ToF detector to be at a good distance from the object
-			if (VL53L0X_get_dist_mm()>MAX_DISTANCE){
+			if (get_tof_distance()>MAX_DISTANCE){
 				forward(_FORWARD, SLOW_SPEED);
-			} else if (VL53L0X_get_dist_mm()<MIN_DISTANCE){
+			} else if (get_tof_distance()<MIN_DISTANCE){
 				forward(_BACKWARD, SLOW_SPEED);
 			} else {
 				//stop the motor and get the distance traveled towards the object
@@ -162,7 +163,7 @@ static THD_FUNCTION(BigBrain, arg) {
 
         	//This part uses the distance to the target and positions to decide on the sequence to follow to get behind it.
         	if(target_found()==1){
-        		get_around(calculate_revolution(distance, angle), VL53L0X_get_dist_mm()*MM_TO_STEP);
+        		get_around(calculate_revolution(distance, angle), get_tof_distance()*MM_TO_STEP);
         		mode = ReAlign;
         	} else {
         		mode = RotateAndSearch;
@@ -190,7 +191,6 @@ static THD_FUNCTION(BigBrain, arg) {
         	if (finished_moving()){
         		forward_nb_steps(calculate_distance(distance, angle)-RADIUS_OBJECT);
         		mode = Victory;
-        		//faut encore rajouter -> victory (check que le robot a fait le trajet)
         	}
         	continue;
 
