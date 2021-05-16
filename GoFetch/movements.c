@@ -1,10 +1,33 @@
 #include <math.h>
+#include <stdlib.h>
 
 #include <leds.h>
 #include <motors.h>
 #include <movements.h>
 
 
+#define MAX_STEPS_PER_MVT 		3
+
+static int temp_pos[3] = {0,0,0};
+static uint8_t state = FIRSTSTATE;
+//================================================================================
+/*	Getter Function definitions
+ *
+ *
+ */
+//================================================================================
+int get_temp_xpos(void){
+	return temp_pos[X];
+}
+int get_temp_ypos(void){
+	return temp_pos[Y];
+}
+int get_temp_angle(void){
+	return temp_pos[ANGLE];
+}
+int get_state(void){
+	return state;
+}
 //================================================================================
 /*	Begin of the Complicated Movement Functions
  *  These need to be put into a thread
@@ -16,6 +39,7 @@
 #define PIover2Steps 	323 //steps
 #define PISteps			646 //steps
 #define PI				3.1416 //no unit
+#define TWOPI 			6.28
 
 
 uint8_t P_align(uint8_t ongoing, int error, int tolerance){
@@ -30,26 +54,47 @@ uint8_t P_align(uint8_t ongoing, int error, int tolerance){
 
 uint8_t translational_movement(int side, int delta_radius, int execution_speed){
 
-	static enum mode {Rotate1, Forwards , Rotate2} mode = Rotate1;
+	static enum mode {Begin, Rotate1, Forwards , Rotate2} mode = Begin;
 	static uint8_t done = FALSE;
+//	static int temp[3];
+//	static int* new_pos_ptr = 0; //12 bytes for 4 ints
 	//tracking is done using motor going forward first
+//	new_pos_ptr = malloc(12)
 	switch(mode){
 
+	case Begin:
+		done = FALSE;
+		mode = Rotate1;
+		break;
 	case Rotate1:
 		if(verify_done_moving(MODE_FINITE, -side*execution_speed, PIover2Steps, rotate)){
 			mode = Forwards;
+//			new_pos_ptr = delta_pos(ROTATE, left_motor_get_pos(), right_motor_get_pos(), 0);
+//			temp_pos[X] = 0;
+//			temp_pos[Y] = 0;
+			temp_pos[ANGLE] = -side*PIover2Steps;
+			state = SECONDSTATE;
 		}
 		break;
 
 	case Forwards:
 		if(verify_done_moving(MODE_FINITE, execution_speed, delta_radius, forwards)){
 			mode = Rotate2;
+//			new_pos = delta_pos(FORWARDS, left_motor_get_pos(), right_motor_get_pos(), 0);
+//			temp_pos = calculate_position(old_pos[0], old_pos[1], old_pos[2], new_pos[0], new_pos[1], new_pos[2])
+			temp_pos[Y] = delta_radius;
+			state = THIRDSTATE;
 		}
 		break;
 
 	case Rotate2:
 		if(verify_done_moving(MODE_FINITE, side*execution_speed, PIover2Steps, rotate)){
 			done = TRUE;
+//			new_pos = delta_pos(ROTATE, left_motor_get_pos(), right_motor_get_pos(), 0);
+//			temp_pos = calculate_position(old_pos[0], old_pos[1], old_pos[2], new_pos[0], new_pos[1], new_pos[2])
+//			temp_pos[ANGLE] = 0;
+			state = REINIT;
+			mode = Begin;
 		}
 		break;
 
@@ -62,28 +107,42 @@ uint8_t go_to_pos(double xinit, double yinit, double angle_init, double xfinal, 
 	double dx = xfinal-xinit;
 	double dy = yfinal-yinit;
 	static uint8_t done = FALSE;
+	static int temp[3];
 
 	double angle_to_cover = atan2(dy, dx)-angle_init;  //angle needed to turn to be looking at destination
 	double distance_to_cover = sqrt(dx*dx +dy*dy);	   //distance to destination
 
-	static enum mode {Rotate1, Forwards , Rotate2} mode = Rotate1;
+	static enum mode {Begin, Rotate1, Forwards , Rotate2} mode = Begin;
 
 
 	switch(mode){
+	case Begin:
+		mode = Rotate1;
+		done = FALSE;
+	break;
 
 	case Rotate1:
 	//Very dangerous coding... we shall see the results
 		if(angle_to_cover>0){
 			if(verify_done_moving(MODE_FINITE, execution_speed, (int)(angle_to_cover*PISteps/PI), rotate)){
 				mode = Forwards;
+				temp_pos[X] = 0;
+				temp_pos[Y] = 0;
+				temp_pos[ANGLE] = calculate_new_angle(left_motor_get_pos(), right_motor_get_pos(), 0);
 			}
 		} else if (angle_to_cover <0){
 			if(verify_done_moving(MODE_FINITE, -execution_speed, (int)(-angle_to_cover*PISteps/PI), rotate)){
 				mode = Forwards;
+				temp_pos[X] = 0;
+				temp_pos[Y] = 0;
+				temp_pos[ANGLE] = calculate_new_angle(left_motor_get_pos(), right_motor_get_pos(), 0);
 			}
 		} else {
 			halt();
 			mode = Forwards;
+			temp_pos[X] = 0;
+			temp_pos[Y] = 0;
+			temp_pos[ANGLE] = calculate_new_angle(left_motor_get_pos(), right_motor_get_pos(), 0);
 		}
 
 	break;
@@ -91,6 +150,9 @@ uint8_t go_to_pos(double xinit, double yinit, double angle_init, double xfinal, 
 	case Forwards:
 		if(verify_done_moving(MODE_FINITE, execution_speed, (int)distance_to_cover, forwards)){
 			mode = Rotate2;
+			temp[X] = calculate_new_x(temp_pos[X], temp_pos[ANGLE], (int)distance_to_cover);
+			temp_pos[Y] = calculate_new_y(temp_pos[Y], temp_pos[ANGLE], (int)distance_to_cover);
+			temp_pos[X] = temp[0];
 		}
 
 	break;
@@ -100,18 +162,31 @@ uint8_t go_to_pos(double xinit, double yinit, double angle_init, double xfinal, 
 		set_body_led(1);
 		angle_to_cover = angle_final-angle_to_cover;
 
-		if(angle_to_cover){
-			done = verify_done_moving(MODE_FINITE, execution_speed, (int)((angle_to_cover)*PISteps/PI), rotate);
+		if(angle_to_cover>0){
+			if(verify_done_moving(MODE_FINITE, execution_speed, (int)(angle_to_cover*PISteps/PI), rotate)){
+				done = TRUE;
+				temp_pos[X] = 0;
+				temp_pos[Y] = 0;
+				temp_pos[ANGLE] = calculate_new_angle(left_motor_get_pos(), right_motor_get_pos(), 0);
+			}
 		} else if (angle_to_cover <0){
-			done = verify_done_moving(MODE_FINITE, -execution_speed, (int)((-angle_to_cover)*PISteps/PI), rotate);
+			if(verify_done_moving(MODE_FINITE, -execution_speed, (int)(-angle_to_cover*PISteps/PI), rotate)){
+				done = TRUE;
+				temp_pos[X] = 0;
+				temp_pos[Y] = 0;
+				temp_pos[ANGLE] = calculate_new_angle(left_motor_get_pos(), right_motor_get_pos(), 0);
+			}
 		} else {
 			halt();
+			done = TRUE;
+			temp_pos[X] = 0;
+			temp_pos[Y] = 0;
+			temp_pos[ANGLE] = calculate_new_angle(left_motor_get_pos(), right_motor_get_pos(), 0);
 		}
 	  break;
 	}
 	return done;
 }
-
 
 //================================================================================
 /*	Begin of the Simple Movement Functions
@@ -120,7 +195,7 @@ uint8_t go_to_pos(double xinit, double yinit, double angle_init, double xfinal, 
  *
  */
 //================================================================================
-#define RADIUS_ROBOT 192 //unity: steps (0.13mm)
+#define RADIUS_ROBOT 205 //unity: steps (0.13mm)
 
 uint8_t forwards(uint8_t mode, int speed, uint32_t nbSteps){
 
@@ -246,5 +321,115 @@ uint8_t verify_done_moving(uint8_t mode, int speed, uint32_t nbSteps, uint8_t (*
 
 	return FALSE;
 }
+
+//returns the variation in position and in angle taking a position (x0,y0,alpha0) = (0,0,0)
+int *delta_pos(uint8_t mvtType, int nbSteps_done_right_motor, int nbSteps_done_left_motor, uint32_t radius) /*int for accounting for direction*/{
+	//{xpos,ypos,alphapos}
+	static int new_pos[3] = {0,0,0};
+	static int temp;
+	switch(mvtType){
+	case FORWARDS:
+		new_pos[0] = nbSteps_done_right_motor;
+		new_pos[1] = 0;
+		new_pos[2] = 0;
+	break;
+
+	case ROTATE:
+		nbSteps_done_right_motor %= PISteps; //Checked: modulo should work on negative numbers too
+		if(nbSteps_done_right_motor >PISteps){
+			nbSteps_done_right_motor -= PISteps;
+		}
+
+		new_pos[0] = 0;
+		new_pos[1] = 0;
+		new_pos[2] = nbSteps_done_right_motor;
+	break;
+
+	case REVOLVE:
+		temp = (nbSteps_done_right_motor-nbSteps_done_left_motor)/2; //calculates as though it were a rotation
+		temp %= PISteps;
+		if(temp>PISteps){
+					temp -= PISteps;
+		}
+
+		if(nbSteps_done_right_motor > nbSteps_done_left_motor){
+			new_pos[X] = (int) radius * sin(temp*PI/PISteps);
+			new_pos[Y] = (int) radius * cos(temp*PI/PISteps);
+			new_pos[ANGLE] = temp;
+		} else {
+			new_pos[X] = (int) -radius * sin(temp*PI/PISteps);
+			new_pos[Y] = (int) -radius * cos(temp*PI/PISteps);
+			new_pos[ANGLE] = temp;
+		}
+	break;
+	}
+
+	return new_pos;
+}
+
+int *calculate_position(double xinit, double yinit, double angle_init, double xprime, double yprime, double angle_prime){
+	static int new_pos[3] = {0, 0, 0};
+	new_pos[ANGLE] = angle_prime+angle_init;
+	new_pos[X] = xinit + sqrt(xprime*xprime+yprime*yprime)*cos(new_pos[ANGLE]);
+	new_pos[Y] = yinit + sqrt(xprime*xprime+yprime*yprime)*sin(new_pos[ANGLE]);
+	return new_pos;
+}
+
+
+int calculate_distance(int dx, int dy){
+	return (int)sqrt(dx*dx+dy*dy);
+}
+
+int calculate_new_x(int xinit, int angle, uint32_t distance_Steps){
+	return xinit + distance_Steps*cos(angle*PI/PISteps);
+}
+
+int calculate_new_y(int yinit, int angle, uint32_t distance_Steps){
+	return yinit + distance_Steps*sin(angle*PI/PISteps);
+}
+
+int calculate_new_angle(int32_t left_rotation, int32_t right_rotation, int old_angle)/*unit is steps*/{
+	int new_angle = right_rotation-left_rotation;
+	new_angle/=2;
+	new_angle += old_angle;
+
+	new_angle %= PISteps; //Checked: modulo should work on negative numbers too
+	if(new_angle >PISteps){
+		new_angle -= PISteps;
+	}
+	return new_angle;
+}
+
+//int calculate_revolve(uint8_t coordinate, uint8_t direction, int angle, uint32_t radius){
+//
+//	int coord = 0;
+//
+//	switch(coordinate){
+//	case X:
+//
+//		if(direction == TRIGONOMETRIC)
+//			coord = radius*sin(angle*PI/PISteps-PI/2);
+//		if(direction == CLOCK)
+//			coord = -radius*sin(angle*PI/PISteps-PI/2);
+//		return coord;
+//
+//	break;
+//
+//	case Y:
+//
+//		coord = radius-radius*cos(angle*PI/PISteps-PI/2);
+//		return coord;
+//
+//	break;
+//
+//	default:
+//		;
+//	break;
+//	}
+//
+//	return 0;
+//}
+
+
 
 

@@ -14,29 +14,30 @@
 
 #define SLOWSPEED 		160
 #define NORMALSPEED 	500
-#define TOLERANCE_FOR_ALIGNEMENT 2
+#define FASTSPEED 		800
 #define MIN_DISTANCE_TO_TARGET 20
 #define WAIT_TIME 		78
+#define RADIUS_INCREASE 1000
 
 #define PIover2			323 //steps for a quarter rotation
-#define PI				646 //steps for a half rotation
+#define PISteps				646 //steps for a half rotation
 #define TWOPI				1292//steps for a full rotation
 
 
-#define TEST5
-//#define PROJECT
+//#define TEST5
+#define PROJECT
 
 
 
 //Definition of static variables for definition of the Field;
 
-static struct Field{
-	int xpos_rob;
-	int ypos_rob;
-	int xpos_target;
-	int ypos_target;
-	int robot_angle;
-} field = {0,0,0,0,0};
+//static struct Field{
+//	int xpos_rob;
+//	int ypos_rob;
+//	int xpos_target;
+//	int ypos_target;
+//	int robot_angle;
+//} field = {0,0,0,0,0};
 
 
 
@@ -51,67 +52,150 @@ static THD_FUNCTION(programRegulator, arg) {
 
 
 #ifdef PROJECT
-	static int robot_angle = 0;
-	static uint8_t searching = TRUE;
-	static uint8_t aligned   = FALSE;
+	static int robot_pos[3] = {0,0,0};
+	static uint8_t changing_mode = TRUE;
+	static uint32_t radius = 0;
+	static int alignement_angle = 0;
 	static enum process {SearchAndAlign, GoToTarget, AroundTarget, Shoot} process = SearchAndAlign;
+	static enum searching_mode{Rotating, Expanding, Revolving} search_mode = Rotating;
 #endif
 
     while(1){
 
 #ifdef PROJECT
 
-    	//constantly searching for if the target is in sight =========
-    	searching = !found_lost_target(searching);
-
-    				if(searching){
-    					set_body_led(1);
-    				} else {
-    					set_body_led(0);
-    				}
-
-    	//Switch for the different robot modes
 
 
     	switch(process){
 
     	//======================================================================================
     	case SearchAndAlign:
-    		reset_step_count();
-    		if(searching){
-    			rotate(MODE_INFINITE, SLOWSPEED, 0);
-			}else if(!aligned){
-				aligned = P_align(!searching, get_angle_to_target(), TOLERANCE_FOR_ALIGNEMENT);
-			}else{
-				process = GoToTarget;
+
+
+    		//rotating
+    		if(get_searching() &&  search_mode==Rotating){
+    			if(verify_done_moving(MODE_FINITE, SLOWSPEED, TWOPI, rotate)){
+    				search_mode = Expanding;
+    				changing_mode = TRUE;
+    			}
+    		}
+
+    		//expanding
+    		else if(get_searching()&& search_mode==Expanding){
+    			if(translational_movement(RIGHT, RADIUS_INCREASE, NORMALSPEED)){
+    				search_mode = Revolving;
+    				changing_mode = TRUE;
+    				radius += RADIUS_INCREASE;
+    				robot_pos[X] += calculate_new_x(robot_pos[X], robot_pos[ANGLE], RADIUS_INCREASE);
+    				robot_pos[Y] += calculate_new_y(robot_pos[Y], robot_pos[ANGLE], RADIUS_INCREASE);
+    			}
+    		}
+
+    		//Revolving
+    		else if (get_searching() && search_mode==Revolving){
+    			if(!get_ongoing_state() && changing_mode){
+					reset_step_count();
+					changing_mode = FALSE;
+				}
+				else if(!get_ongoing_state() && !changing_mode){
+					changing_mode = TRUE;
+					search_mode = Expanding;
+				}
+				if(revolve(MODE_FINITE, FASTSPEED, radius, TRIGONOMETRIC, 2*3.1416*radius)){
+					changing_mode = TRUE;
+    				search_mode = Expanding;
+    				set_front_led(1);
+				}
+    		}
+
+    		//In case a process was interrupted, we can get back in.
+    		else if (get_searching() && !changing_mode)	changing_mode = TRUE;
+
+
+    		//calculating if process has been interrupted
+    		else if(!get_aligned() && changing_mode){
 				halt();
-				robot_angle += right_motor_get_pos();
+				changing_mode = FALSE;
+				switch(search_mode){
+
+
+				case(Rotating):
+					robot_pos[ANGLE] = calculate_new_angle(left_motor_get_pos(),right_motor_get_pos(), robot_pos[ANGLE]);
+				break;
+
+
+				case(Expanding):
+					switch(get_state()){
+					case FIRSTSTATE:
+						robot_pos[ANGLE] = calculate_new_angle(left_motor_get_pos(),right_motor_get_pos(), robot_pos[ANGLE]);
+					break;
+					case SECONDSTATE:
+						robot_pos[ANGLE] = calculate_new_angle(0, get_temp_angle(), robot_pos[ANGLE]);
+						robot_pos[X]	 = calculate_new_x(robot_pos[X], robot_pos[ANGLE], right_motor_get_pos());
+						robot_pos[Y]	 = calculate_new_y(robot_pos[Y], robot_pos[ANGLE], right_motor_get_pos());
+					break;
+					case THIRDSTATE:
+						robot_pos[ANGLE] = calculate_new_angle(0, get_temp_angle() + right_motor_get_pos(), robot_pos[ANGLE]);
+						robot_pos[X]	 = calculate_new_x(robot_pos[X], robot_pos[ANGLE]+get_temp_angle(), abs(get_temp_ypos()));
+						robot_pos[Y]	 = calculate_new_y(robot_pos[Y], robot_pos[ANGLE]+get_temp_angle(), abs(get_temp_ypos()));
+					break;
+					}
+				break;
+
+
+				case(Revolving):
+					robot_pos[ANGLE] 	 = calculate_new_angle(left_motor_get_pos(), right_motor_get_pos(), robot_pos[ANGLE]);
+//					robot_pos[X]		 = calculate_new_x(robot_pos[X], (PISteps-robot_pos[ANGLE])/2,
+//PAS FINI
+				break;
+				default: break;
+				}
+
+				changing_mode=FALSE;
+				reset_step_count();
+    		}
+
+    		//Aligning
+    		else if(!get_aligned()){
+				P_align(!get_searching(), get_angle_to_target(), TOLERANCE_FOR_ALIGNEMENT);
 			}
 
-    					if(aligned){
-    						set_led(LED1,1);
-    					} else {
-    						set_led(LED1,0);
-    					}
+    		//Calculating if aligning was interrupted
+    		else if(get_aligned() && !changing_mode){
+				robot_pos[ANGLE] = calculate_new_angle(left_motor_get_pos(), right_motor_get_pos(), robot_pos[ANGLE]);
+				changing_mode = TRUE;
+			}
+
+    		//Changing mode
+    		else{
+				process = GoToTarget;
+				halt();
+				robot_pos[ANGLE] += right_motor_get_pos();
+			}
+
 
     	  break;
 
     	//======================================================================================
-    	case GoToTarget:
-
-//    		if(get_prox(1)<MIN_DISTANCE_TO_TARGET){
-//    			halt();
-//    			set_front_led(1);
-//    		}
-    	  break;
-
-    	//======================================================================================
-    	case AroundTarget:
-    	  break;
-
-    	//======================================================================================
-    	case Shoot:
-    	  break;
+//    	case GoToTarget:
+//
+////    		if(get_prox(1)<MIN_DISTANCE_TO_TARGET){
+////    			halt();
+////    			set_front_led(1);
+////    		}
+//    	  break;
+//
+//    	//======================================================================================
+//    	case AroundTarget:
+//    	  break;
+//
+//    	//======================================================================================
+//    	case Shoot:
+//    	  break;
+//    	}
+    	default:
+    		if(!get_aligned() || get_searching()) process = SearchAndAlign;
+    		break;
     	}
 
 #endif
@@ -272,11 +356,11 @@ static THD_FUNCTION(programRegulator, arg) {
 		static uint8_t aligned = 0;
 		static uint8_t searching = 1;
 
-		static uint16_t robot_radius = 140, target_radius = 80;
+//		static uint16_t robot_radius = 140, target_radius = 80;
 		static uint32_t MAX_DISTANCE = 80, MIN_DISTANCE = 60;
-		static uint16_t radius = 0;
+//		static uint16_t radius = 0;
 		static uint8_t changing_mode;
-		static uint8_t test2 = 0;
+//		static uint8_t test2 = 0;
 
 
 		searching = !found_lost_target(searching);

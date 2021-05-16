@@ -11,14 +11,50 @@
 #define RIGHT 			1
 #define LEFT 			-1
 
+#define FORWARDS 	0
+#define ROTATE		1
+#define REVOLVE		2
+
+#define FIRSTSTATE  0
+#define SECONDSTATE 1
+#define THIRDSTATE  2
+#define REINIT 		FIRSTSTATE
+
+#define X			0
+#define Y 			1
+#define ANGLE 		2
+
 //================================================================================
 /*	Some functions to make life easier
- *
+ *	Mostly calculations
  *
  */
 //================================================================================
+
+//Function to make sure the MODE_FINITE does not stop or reinitialise while counting
 uint8_t verify_done_moving(uint8_t mode, int speed, uint32_t nbSteps, uint8_t (*f)(uint8_t, int, uint32_t));
 
+//Function to calculate positions relative to the (x,y,alpha) = (0,0,0) point
+int *delta_pos(uint8_t mvtType, int nbSteps_done_right_motor, int nbSteps_done_left_motor, uint32_t radius);
+
+//Function to calculate position using displacement (prime) and initial positions (init)
+int *calculate_position(double xinit, double yinit, double angle_init, double xprime, double yprime, double angle_prime);
+
+int calculate_new_x(int xinit, int angle, uint32_t distance_Steps);
+int calculate_new_y(int yinit, int angle, uint32_t distance_Steps);
+int calculate_new_angle(int32_t left_rotation, int32_t right_rotation, int old_angle);/*unit is steps*/
+int calculate_distance(int dx, int dy);
+int get_state(void);
+
+//================================================================================
+/*	Getter Functions
+ *
+ */
+//================================================================================
+
+int get_temp_xpos(void);
+int get_temp_ypos(void);
+int get_temp_angle(void);
 
 
 //================================================================================

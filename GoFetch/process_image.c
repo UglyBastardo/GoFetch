@@ -9,9 +9,6 @@
 
 #include <process_image.h>
 
-static uint8_t target_not_found = 0; //searching = TRUE, aligned = FALSE;
-static int target_position = 0; //angular position given in pixels with
-
 #define WIDTH_SLOPE 		10
 #define MIN_WIDTH_PIXELS	30
 #define MIN_HALFWIDTH_PX	15
@@ -19,8 +16,9 @@ static int target_position = 0; //angular position given in pixels with
 #define NOISE_LEVEL			6
 #define MEDIAN_OFFSET		NOISE_LEVEL
 #define MAX_PX_VALUE		32
+#define THRESHOLD			20
 #define OFFSET				14			//Offset if the number to substract from max_px_value to find the threshhold value
-
+#define PXTOCM				2000
 
 #define RED					0
 #define GREEN 				1
@@ -38,6 +36,14 @@ static int target_position = 0; //angular position given in pixels with
 #define NB_LINES_TO_READ 	2
 
 #define FRAMES_FOR_DETECTION 3
+
+//static Variables for the file
+static uint8_t target_not_found = 0, searching = TRUE, aligned = FALSE;
+static int target_position = 0; //angular position given in pixels with
+static uint16_t target_width = 0;
+static uint16_t target_distance = 0;
+
+
 
 //=================================================================
 /*
@@ -83,8 +89,9 @@ void update_target_detection(uint8_t *buffer){
 		{
 			//the slope must at least be WIDTH_SLOPE wide and is compared
 		    //to the mean of the image
-			if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i+WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
-		    {
+//			if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i+WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
+			if(buffer[i] > THRESHOLD)
+			{
 		        begin = i;
 		        stop = 1;
 		    }
@@ -97,18 +104,19 @@ void update_target_detection(uint8_t *buffer){
 
 		    while(stop == 0 && i < IMAGE_BUFFER_SIZE)
 		    {
-		    	if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i-WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
-		        {
+//		    	if(buffer[i] < MAX_PX_VALUE-OFFSET-MIN_OFFSET && buffer[i-WIDTH_SLOPE] > MAX_PX_VALUE-OFFSET)
+				if(buffer[i] > THRESHOLD-MIN_OFFSET)
+		    	{
 		            end = i;
 		            stop = 1;
 		        }
 		        i++;
 		    }
 		    //if an end was not found
-		    if (i > IMAGE_BUFFER_SIZE || !end)
-		    {
-		        target_not_found = 1;
-		    }
+//		    if (i > IMAGE_BUFFER_SIZE || !end)
+//		    {
+//		        target_not_found = 1;
+//		    }
 		}
 		else//if no begin was found
 		{
@@ -129,6 +137,8 @@ void update_target_detection(uint8_t *buffer){
 		begin = 0;
 		end = 0;
 	}else{
+		target_width = end - begin;
+		target_distance = PXTOCM/target_width;
 		target_position = (begin + end - IMAGE_BUFFER_SIZE)/2; //gives the target position relativ to the center of the image.
 	}
 
@@ -194,6 +204,24 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//search for a target in the image and gets its position in pixels
 		update_target_detection(image);
 
+		//update searching
+		searching = !found_lost_target(searching);
+
+		if(searching){
+			set_body_led(1);
+		} else {
+			set_body_led(0);
+		}
+
+		//update aligned
+		aligned = (!searching && target_position<TOLERANCE_FOR_ALIGNEMENT && target_position>-TOLERANCE_FOR_ALIGNEMENT);
+
+		if(aligned){
+			set_led(LED1, 1);
+		} else {
+			set_led(LED1, 0);
+		}
+
 
 //		send_to_computer = !send_to_computer;
 		if(target_not_found) {
@@ -226,6 +254,20 @@ static THD_FUNCTION(ProcessImage, arg) {
 //=================================================================
 
 
+uint8_t get_searching(void){
+	return searching;
+}
+
+uint8_t get_aligned(void){
+	return aligned;
+}
+
+uint8_t get_distance_camera(void){
+	return target_distance;
+}
+
+
+//mode=1=searching mode=0=not_searching
 uint8_t found_lost_target(uint8_t mode){
 
 	//counts the number of times the object was detected
@@ -242,20 +284,12 @@ uint8_t found_lost_target(uint8_t mode){
 	if(detection_counter>FRAMES_FOR_DETECTION){
 		detection_counter = 0;
 		//returns true if the mode is find and false if the mode is not
-		return (TRUE==mode);
+		return mode;
 	} else {
 		//returns true if the mode is find and false otherwise
-		return (FALSE==mode);
+		return !mode;
 	}
 }
-
-//uint8_t get_searching(void){
-//	return searching;
-//}
-
-//uint8_t get_aligned(void){
-//	return aligned;
-//}
 
 int get_angle_to_target(void){
 	return -target_position;
