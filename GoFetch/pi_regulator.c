@@ -283,8 +283,15 @@ void revolve_around(Angle angle_to_revolve, uint16_t radius_of_revolution){
 
 //	currentState = DoNothing_;
 
-	int16_t speed_left = ((radius_of_revolution - DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
-	int16_t speed_right = ((radius_of_revolution+ DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
+	int16_t speed_left = -SLOW_SPEED;
+	int16_t speed_right = SLOW_SPEED;
+
+	if (radius_of_revolution!=0){
+		speed_left = ((radius_of_revolution - DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
+		speed_right = ((radius_of_revolution+ DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
+	}
+//	int16_t speed_left = ((radius_of_revolution - DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
+//	int16_t speed_right = ((radius_of_revolution+ DIST_WHEELS/2)*NORMAL_SPEED)/(radius_of_revolution);
 
 	int32_t left_distance = (radius_of_revolution-DIST_WHEELS/2)*angle_to_revolve/MILIRAD_TO_RAD;
 	int32_t right_distance = (radius_of_revolution+DIST_WHEELS/2)*angle_to_revolve/MILIRAD_TO_RAD;
@@ -302,7 +309,7 @@ void reset_number_step(void){
 	right_motor_set_pos(0);
 }
 
-void forward_nb_steps(uint32_t steps_to_complete){
+void forward_nb_steps(int32_t steps_to_complete){
 
 	reset_number_step();
 
@@ -310,8 +317,13 @@ void forward_nb_steps(uint32_t steps_to_complete){
 		currentState = CurrentlyMoving;
 	}
 
-	left_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);//créer pour aussi aller en arrière?
-	right_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);
+	if (steps_to_complete<0){
+		left_motor_set_speed_step(-NORMAL_SPEED, steps_to_complete);//créer pour aussi aller en arrière?
+		right_motor_set_speed_step(-NORMAL_SPEED, steps_to_complete);
+	} else {
+		left_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);//créer pour aussi aller en arrière?
+		right_motor_set_speed_step(NORMAL_SPEED, steps_to_complete);
+	}
 }
 
 void pi_regulator_start(void){

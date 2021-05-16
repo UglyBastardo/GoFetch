@@ -4,7 +4,7 @@
 #endif /* BIG_BRAIN_H */
 
 
-enum Process_Mode {DoNothing, RotateAndSearch, Align, FinishedAligning, Revolve, Forward, Shoot, Victory};
+enum Process_Mode {DoNothing, RotateAndSearch, Align, FinishedAligning, Revolve, Forward, ReAlign, Shoot, Victory};
 
 void 	big_brain_start(void);
 

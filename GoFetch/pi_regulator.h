@@ -110,7 +110,7 @@ int16_t get_radius(void);
 */
 uint8_t finished_moving(void);
 
-void forward_nb_steps(uint32_t steps_to_complete);
+void forward_nb_steps(int32_t steps_to_complete);
 
 void get_around(Angle angle_to_revolve, uint16_t radius_of_revolution);
 

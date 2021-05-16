@@ -11,13 +11,14 @@
 #include <leds.h>
 
 //enum Process_Mode {DoNothing, RotateAndSearch, Align, Revolve, Forward, Shoot, Victory};
-static enum Process_Mode mode = DoNothing; //
+static enum Process_Mode mode = RotateAndSearch; //
 
 #define STEPS_PER_ANGULAR_UNIT 	1
-#define MIN_DISTANCE 		  	40 		//mm
-#define MAX_DISTANCE			100		//mm
+#define MIN_DISTANCE 		  	60 		//mm
+#define MAX_DISTANCE			140		//mm
 #define FULLROTATION 			1293 	//steps
 #define OBJECT_RADIUS		 	12 		//mm
+#define SMALL_DISTANCE			100 //steps
 
 //===============================================================================
 //dayan
@@ -197,6 +198,7 @@ static THD_FUNCTION(BigBrain, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
+    static int16_t dist_robot_target = 0;
 
     while(mode!=Victory)
     {
@@ -204,14 +206,14 @@ static THD_FUNCTION(BigBrain, arg) {
       {
       //===============================================================================================================
         case DoNothing:
-        	if(target_found()){
-        		set_body_led(1);
-        		set_p_regulator();
-        	} else {
-        		set_body_led(0);
-        		set_front_led(0);
-        		motor_stop();
-        	}
+//        	if(target_found()){
+//        		set_body_led(1);
+//        		set_p_regulator();
+//        	} else {
+//        		set_body_led(0);
+//        		set_front_led(0);
+//        		motor_stop();
+//        	}
           continue;
 
       //===============================================================================================================
@@ -271,7 +273,7 @@ static THD_FUNCTION(BigBrain, arg) {
         	//This part uses the distance to the target and positions to decide on the sequence to follow to get behind it.
         	if(target_detected()==1){
         		get_around(calculate_revolution(), VL53L0X_get_dist_mm()*MM_TO_STEP);
-        		mode = Shoot;
+        		mode = ReAlign;
         	} else {
         		mode = RotateAndSearch;
         	}
@@ -294,7 +296,7 @@ static THD_FUNCTION(BigBrain, arg) {
         	}
         	motors_set_ongoing(FALSE);
         	*/
-        	if (target_detected()==1){
+//        	if (target_detected()==1){
 				if (VL53L0X_get_dist_mm()>MAX_DISTANCE){
 					//set_front_led(1);
 					forward(_FORWARD, SLOW_SPEED);
@@ -306,15 +308,15 @@ static THD_FUNCTION(BigBrain, arg) {
 					motor_stop();
 					mode = Revolve;
 				}
-        	} else {
-        		mode = RotateAndSearch;
-        	}
+//        	} else {
+//        		mode = RotateAndSearch;
+//        	}
 
           continue;
 
       //===============================================================================================================
         //revoir le nom?
-        case Shoot:
+        case ReAlign:
         	/*if(target_detected()) {
         		motors_set_ongoing(TRUE);
         		forward(_FORWARD, calculate_speed());
@@ -331,13 +333,27 @@ static THD_FUNCTION(BigBrain, arg) {
 //        	set_front_led(1);
         	//mauvais code danger finished moving one time read
         	if(target_detected() && finished_moving()){
+//        		forward_nb_steps(calculate_distance());
+////        		forward_nb_steps(500);
+//        		set_body_led(1);
+//        		mode = DoNothing;
+        		set_p_regulator();
+        		mode = Shoot;
+
+        	//in case the robot doesn't see the piece because too close
+        	} else if (finished_moving()){
+        		forward_nb_steps(-SMALL_DISTANCE);
+        	}
+
+          continue;
+      //===============================================================================================================
+
+        case Shoot:
+        	if (finished_moving()){
         		forward_nb_steps(calculate_distance());
-//        		forward_nb_steps(500);
         		set_body_led(1);
         		mode = DoNothing;
         	}
-          continue;
-      //===============================================================================================================
         case Victory:
         	//scream();
           continue;
