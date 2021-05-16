@@ -154,11 +154,12 @@ void update_target_detection(uint8_t *buffer){
 
 		//if a line too small has been detected, continues the search
 		if(!target_not_found && (end-begin) < MIN_WIDTH_PIXELS){
-			i = end; //un peu bizzare?
-			begin = 0;
-			end = 0;
-			stop = 0;
-			wrong_target = 1;
+//			i = end; //un peu bizzare?
+//			begin = 0;
+//			end = 0;
+//			stop = 0;
+//			wrong_target = 1;
+			target_not_found = 1;
 		}
 	}while(wrong_target);
 
